@@ -2,6 +2,7 @@
   "name": "nicomview",
   "version": "1.0.0",
   "description": "ニコニコ生放送コメントビューア for OBS",
+  "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -12,7 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "package:win": "npm run build && electron-builder --win",
     "package:mac": "npm run build && electron-builder --mac",
-    "package:linux": "npm run build && electron-builder --linux"
+    "package:linux": "npm run build && electron-builder --linux",
+    "test:e2e": "npx playwright test --config=e2e/playwright.config.ts"
   },
   "build": {
     "appId": "com.nicomview.comment-viewer",
@@ -22,8 +24,8 @@
     },
     "extraResources": [
       {
-        "from": "resources/overlay",
-        "to": "overlay"
+        "from": "resources/plugins",
+        "to": "plugins"
       }
     ],
     "win": {
@@ -46,6 +48,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.0",

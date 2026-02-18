@@ -1,6 +1,5 @@
 import { EventEmitter } from 'events'
-
-export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error'
+import type { ConnectionState } from '../shared/types'
 
 interface ProviderOptions {
   liveId: string

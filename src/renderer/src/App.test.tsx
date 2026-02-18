@@ -81,9 +81,9 @@ describe('App', () => {
       expect(screen.queryByText('http://localhost:3939')).not.toBeInTheDocument()
     })
 
-    it('プラグイン設定セクションが表示されている', () => {
+    it('プラグイン設定セクションがロード後に表示される', async () => {
       render(<App />)
-      expect(screen.getByText('プラグイン設定')).toBeInTheDocument()
+      expect(await screen.findByText('プラグイン設定')).toBeInTheDocument()
     })
   })
 

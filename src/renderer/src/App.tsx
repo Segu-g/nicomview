@@ -74,6 +74,7 @@ function App(): JSX.Element {
   const [copied, setCopied] = useState(false)
   const [plugins, setPlugins] = useState<PluginDescriptor[]>([])
   const [preferences, setPreferences] = useState<PluginPreferences>(defaultPreferences)
+  const [pluginsLoaded, setPluginsLoaded] = useState(false)
 
   useEffect(() => {
     const unsubscribe = window.commentViewerAPI.onStateChange((state: ConnectionState) => {
@@ -89,6 +90,7 @@ function App(): JSX.Element {
     ]).then(([loadedPlugins, loadedPrefs]) => {
       setPlugins(loadedPlugins)
       setPreferences(loadedPrefs)
+      setPluginsLoaded(true)
     })
   }, [])
 
@@ -205,25 +207,27 @@ function App(): JSX.Element {
             </Alert>
           )}
 
-          <Card variant="outlined" sx={{ mb: 2 }}>
-            <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                プラグイン設定
-              </Typography>
-              <PluginSelector
-                plugins={plugins}
-                preferences={preferences}
-                onPreferencesChange={handlePreferencesChange}
-              />
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2, mb: 0.5 }}>
-                表示イベント
-              </Typography>
-              <EventFilter
-                preferences={preferences}
-                onPreferencesChange={handlePreferencesChange}
-              />
-            </CardContent>
-          </Card>
+          {pluginsLoaded && (
+            <Card variant="outlined" sx={{ mb: 2 }}>
+              <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                  プラグイン設定
+                </Typography>
+                <PluginSelector
+                  plugins={plugins}
+                  preferences={preferences}
+                  onPreferencesChange={handlePreferencesChange}
+                />
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2, mb: 0.5 }}>
+                  表示イベント
+                </Typography>
+                <EventFilter
+                  preferences={preferences}
+                  onPreferencesChange={handlePreferencesChange}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {isConnected && (
             <Card variant="outlined" sx={{ mb: 2 }}>

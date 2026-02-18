@@ -1,15 +1,18 @@
 import { test, expect } from '../fixtures/electron'
 
 test.describe('Overlay HTTP server', () => {
-  test('redirects / to active overlay plugin', async ({ electronApp }) => {
+  test('serves plugin index at /', async ({ electronApp }) => {
     await electronApp.firstWindow()
 
-    const resp = await fetch('http://localhost:3939/', { redirect: 'manual' })
-    expect(resp.status).toBe(302)
-    expect(resp.headers.get('location')).toBe('/plugins/nico-scroll/overlay/')
+    const resp = await fetch('http://localhost:3939/')
+    const html = await resp.text()
+    expect(resp.status).toBe(200)
+    expect(html).toContain('NicomView Plugins')
+    expect(html).toContain('nico-scroll')
+    expect(html).toContain('md3-comment-list')
   })
 
-  test('serves overlay HTML at /plugins/nico-scroll/overlay/', async ({ electronApp }) => {
+  test('serves nico-scroll overlay HTML', async ({ electronApp }) => {
     await electronApp.firstWindow()
 
     const resp = await fetch('http://localhost:3939/plugins/nico-scroll/overlay/')
@@ -19,13 +22,12 @@ test.describe('Overlay HTTP server', () => {
     expect(html).toContain('overlay.js')
   })
 
-  test('serves overlay.js at /plugins/nico-scroll/overlay/overlay.js', async ({ electronApp }) => {
+  test('serves md3-comment-list overlay HTML', async ({ electronApp }) => {
     await electronApp.firstWindow()
 
-    const resp = await fetch('http://localhost:3939/plugins/nico-scroll/overlay/overlay.js')
-    const js = await resp.text()
+    const resp = await fetch('http://localhost:3939/plugins/md3-comment-list/overlay/')
+    const html = await resp.text()
     expect(resp.status).toBe(200)
-    expect(js).toContain('WebSocket')
-    expect(js).toContain('showComment')
+    expect(html).toContain('コメントリスト')
   })
 })

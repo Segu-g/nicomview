@@ -14,7 +14,11 @@ import {
   IconButton,
   Tooltip,
   Collapse,
-  Alert
+  Alert,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction
 } from '@mui/material'
 import {
   ContentCopy as CopyIcon,
@@ -27,9 +31,7 @@ import type {
   PluginPreferences
 } from '../../shared/types'
 import { ALL_EVENT_TYPES } from '../../shared/types'
-import PluginSelector from './components/PluginSelector'
 import EventFilter from './components/EventFilter'
-import PluginHost from './components/PluginHost'
 
 const theme = createTheme({
   colorSchemes: {
@@ -61,17 +63,17 @@ const stateColors: Record<ConnectionState, 'default' | 'warning' | 'success' | '
 }
 
 const defaultPreferences: PluginPreferences = {
-  activeRendererPlugin: null,
-  activeOverlayPlugin: null,
   enabledEvents: [...ALL_EVENT_TYPES]
 }
+
+const BASE_URL = 'http://localhost:3939'
 
 function App(): JSX.Element {
   const [liveId, setLiveId] = useState('')
   const [cookies, setCookies] = useState('')
   const [showCookies, setShowCookies] = useState(false)
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected')
-  const [copied, setCopied] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [plugins, setPlugins] = useState<PluginDescriptor[]>([])
   const [preferences, setPreferences] = useState<PluginPreferences>(defaultPreferences)
   const [pluginsLoaded, setPluginsLoaded] = useState(false)
@@ -103,11 +105,11 @@ function App(): JSX.Element {
     await window.commentViewerAPI.disconnect()
   }, [])
 
-  const handleCopy = useCallback(async () => {
-    const url = window.commentViewerAPI.getOverlayUrl()
+  const handleCopyUrl = useCallback(async (pluginId: string) => {
+    const url = `${BASE_URL}/plugins/${pluginId}/overlay/`
     await navigator.clipboard.writeText(url)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setCopiedId(pluginId)
+    setTimeout(() => setCopiedId(null), 2000)
   }, [])
 
   const handlePreferencesChange = useCallback(
@@ -125,148 +127,128 @@ function App(): JSX.Element {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-        <Container maxWidth="sm" sx={{ pt: 2, pb: 1, flexShrink: 0 }}>
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
-            NicomView
-          </Typography>
+      <Container maxWidth="sm" sx={{ py: 4 }}>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          NicomView
+        </Typography>
 
-          <Card variant="outlined" sx={{ mb: 2 }}>
-            <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                <Typography variant="subtitle2" color="text.secondary">
-                  接続状態
-                </Typography>
-                <Chip
-                  label={stateLabels[connectionState]}
-                  color={stateColors[connectionState]}
-                  size="small"
-                />
-              </Box>
-
-              <TextField
-                fullWidth
-                label="放送ID"
-                placeholder="lv123456789"
-                value={liveId}
-                onChange={(e) => setLiveId(e.target.value)}
-                disabled={isConnected || isConnecting}
+        <Card variant="outlined" sx={{ mb: 3 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                接続状態
+              </Typography>
+              <Chip
+                label={stateLabels[connectionState]}
+                color={stateColors[connectionState]}
                 size="small"
-                sx={{ mb: 1.5 }}
               />
+            </Box>
 
-              <Box sx={{ mb: 1.5 }}>
-                <Button
-                  size="small"
-                  onClick={() => setShowCookies(!showCookies)}
-                  endIcon={showCookies ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                >
-                  Cookieオプション
-                </Button>
-                <Collapse in={showCookies}>
-                  <TextField
-                    fullWidth
-                    label="Cookie（ログイン視聴用）"
-                    placeholder="user_session=..."
-                    value={cookies}
-                    onChange={(e) => setCookies(e.target.value)}
-                    disabled={isConnected || isConnecting}
-                    multiline
-                    rows={2}
-                    size="small"
-                    sx={{ mt: 1 }}
+            <TextField
+              fullWidth
+              label="放送ID"
+              placeholder="lv123456789"
+              value={liveId}
+              onChange={(e) => setLiveId(e.target.value)}
+              disabled={isConnected || isConnecting}
+              sx={{ mb: 2 }}
+            />
+
+            <Box sx={{ mb: 2 }}>
+              <Button
+                size="small"
+                onClick={() => setShowCookies(!showCookies)}
+                endIcon={showCookies ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              >
+                Cookieオプション
+              </Button>
+              <Collapse in={showCookies}>
+                <TextField
+                  fullWidth
+                  label="Cookie（ログイン視聴用）"
+                  placeholder="user_session=..."
+                  value={cookies}
+                  onChange={(e) => setCookies(e.target.value)}
+                  disabled={isConnected || isConnecting}
+                  multiline
+                  rows={2}
+                  sx={{ mt: 1 }}
+                />
+              </Collapse>
+            </Box>
+
+            {isConnected ? (
+              <Button
+                variant="outlined"
+                color="error"
+                fullWidth
+                onClick={handleDisconnect}
+              >
+                切断
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={handleConnect}
+                disabled={isConnecting}
+              >
+                {isConnecting ? '接続中...' : '接続'}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        {connectionState === 'error' && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            接続エラーが発生しました。放送IDを確認してください。
+          </Alert>
+        )}
+
+        <Card variant="outlined" sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              表示プラグイン
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              以下のURLをOBSブラウザソースやブラウザで開くとコメントが表示されます
+            </Typography>
+            <List dense disablePadding>
+              {plugins.filter((p) => p.overlay).map((plugin) => (
+                <ListItem key={plugin.id} sx={{ px: 0 }}>
+                  <ListItemText
+                    primary={plugin.name}
+                    secondary={`${BASE_URL}/plugins/${plugin.id}/overlay/`}
+                    secondaryTypographyProps={{ fontFamily: 'monospace', fontSize: 12 }}
                   />
-                </Collapse>
-              </Box>
+                  <ListItemSecondaryAction>
+                    <Tooltip title={copiedId === plugin.id ? 'コピーしました' : 'URLをコピー'}>
+                      <IconButton edge="end" onClick={() => handleCopyUrl(plugin.id)} size="small">
+                        <CopyIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </List>
+          </CardContent>
+        </Card>
 
-              {isConnected ? (
-                <Button
-                  variant="outlined"
-                  color="error"
-                  fullWidth
-                  onClick={handleDisconnect}
-                >
-                  切断
-                </Button>
-              ) : (
-                <Button
-                  variant="contained"
-                  fullWidth
-                  onClick={handleConnect}
-                  disabled={isConnecting}
-                >
-                  {isConnecting ? '接続中...' : '接続'}
-                </Button>
-              )}
+        {pluginsLoaded && (
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                表示イベント
+              </Typography>
+              <EventFilter
+                preferences={preferences}
+                onPreferencesChange={handlePreferencesChange}
+              />
             </CardContent>
           </Card>
-
-          {connectionState === 'error' && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              接続エラーが発生しました。放送IDを確認してください。
-            </Alert>
-          )}
-
-          {pluginsLoaded && (
-            <Card variant="outlined" sx={{ mb: 2 }}>
-              <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  プラグイン設定
-                </Typography>
-                <PluginSelector
-                  plugins={plugins}
-                  preferences={preferences}
-                  onPreferencesChange={handlePreferencesChange}
-                />
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2, mb: 0.5 }}>
-                  表示イベント
-                </Typography>
-                <EventFilter
-                  preferences={preferences}
-                  onPreferencesChange={handlePreferencesChange}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {isConnected && (
-            <Card variant="outlined" sx={{ mb: 2 }}>
-              <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  OBSブラウザソース用URL
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontFamily: 'monospace',
-                      bgcolor: 'action.hover',
-                      px: 2,
-                      py: 1,
-                      borderRadius: 1,
-                      flex: 1
-                    }}
-                  >
-                    {window.commentViewerAPI.getOverlayUrl()}
-                  </Typography>
-                  <Tooltip title={copied ? 'コピーしました' : 'URLをコピー'}>
-                    <IconButton onClick={handleCopy} size="small">
-                      <CopyIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-              </CardContent>
-            </Card>
-          )}
-        </Container>
-
-        <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', px: 2, pb: 2 }}>
-          <PluginHost
-            activePluginId={preferences.activeRendererPlugin}
-            preferences={preferences}
-          />
-        </Box>
-      </Box>
+        )}
+      </Container>
     </ThemeProvider>
   )
 }

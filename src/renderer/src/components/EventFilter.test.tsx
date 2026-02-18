@@ -6,8 +6,6 @@ import type { PluginPreferences } from '../../../shared/types'
 import { ALL_EVENT_TYPES } from '../../../shared/types'
 
 const defaultPreferences: PluginPreferences = {
-  activeRendererPlugin: 'md3-comment-list',
-  activeOverlayPlugin: 'nico-scroll',
   enabledEvents: [...ALL_EVENT_TYPES]
 }
 
@@ -47,7 +45,6 @@ describe('EventFilter', () => {
   it('チェックを入れるとイベントタイプが追加される', async () => {
     const onChange = vi.fn()
     const prefs: PluginPreferences = {
-      ...defaultPreferences,
       enabledEvents: ['comment', 'notification']
     }
     render(<EventFilter preferences={prefs} onPreferencesChange={onChange} />)

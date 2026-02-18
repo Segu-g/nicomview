@@ -1,11 +1,9 @@
 import { test, expect } from '../fixtures/electron'
 
 test.describe('Comment flow', () => {
-  test('broadcast comment appears in overlay DOM', async ({ electronApp }) => {
-    // Wait for the main window and server to be ready
+  test('broadcast comment appears in nico-scroll overlay', async ({ electronApp }) => {
     await electronApp.firstWindow()
 
-    // Open the overlay in a new Electron BrowserWindow via the main process
     const overlayPage = await electronApp.evaluate(async ({ BrowserWindow }) => {
       const win = new BrowserWindow({
         width: 800,
@@ -16,16 +14,13 @@ test.describe('Comment flow', () => {
       return win.id
     })
 
-    // Get the overlay page from Playwright
     const pages = electronApp.windows()
     const overlay = pages.find((p) => p.url().includes('localhost:3939'))
     expect(overlay).toBeDefined()
 
-    // Wait for WebSocket connection to establish
     await overlay!.waitForLoadState('networkidle')
     await overlay!.waitForTimeout(1000)
 
-    // Broadcast a comment via __testServer
     await electronApp.evaluate(async () => {
       const server = (global as any).__testServer
       if (server) {
@@ -33,30 +28,38 @@ test.describe('Comment flow', () => {
       }
     })
 
-    // Verify the comment element appears in the overlay DOM
     const commentEl = overlay!.locator('.comment', { hasText: 'テストコメント' })
     await expect(commentEl).toBeVisible({ timeout: 5_000 })
-    await expect(commentEl).toHaveText('テストコメント')
   })
 
-  test('comment event reaches renderer window', async ({ electronApp, mainPage }) => {
-    // Wait for the app to be fully loaded
-    await mainPage.waitForLoadState('networkidle')
+  test('broadcast comment appears in md3-comment-list overlay', async ({ electronApp }) => {
+    await electronApp.firstWindow()
 
-    // Verify the plugin host renders (md3-comment-list is default)
-    // The plugin should mount and create a list element
-    await mainPage.waitForTimeout(1000)
+    const overlayPage = await electronApp.evaluate(async ({ BrowserWindow }) => {
+      const win = new BrowserWindow({
+        width: 400,
+        height: 600,
+        webPreferences: { contextIsolation: false, nodeIntegration: false }
+      })
+      await win.loadURL('http://localhost:3939/plugins/md3-comment-list/overlay/')
+      return win.id
+    })
 
-    // Broadcast a comment via __testServer
+    const pages = electronApp.windows()
+    const overlay = pages.find((p) => p.url().includes('md3-comment-list'))
+    expect(overlay).toBeDefined()
+
+    await overlay!.waitForLoadState('networkidle')
+    await overlay!.waitForTimeout(1000)
+
     await electronApp.evaluate(async () => {
       const server = (global as any).__testServer
       if (server) {
-        server.broadcast('comment', { content: 'レンダラーテスト' })
+        server.broadcast('comment', { content: 'リストテスト' })
       }
     })
 
-    // Verify comment appears in the renderer's comment list
-    const commentText = mainPage.locator('text=レンダラーテスト')
-    await expect(commentText).toBeVisible({ timeout: 5_000 })
+    const commentEl = overlay!.locator('.comment-item', { hasText: 'リストテスト' })
+    await expect(commentEl).toBeVisible({ timeout: 5_000 })
   })
 })

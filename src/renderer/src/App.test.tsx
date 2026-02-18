@@ -11,8 +11,6 @@ declare global {
       connect: ReturnType<typeof vi.fn>
       disconnect: ReturnType<typeof vi.fn>
       onStateChange: ReturnType<typeof vi.fn>
-      onCommentEvent: ReturnType<typeof vi.fn>
-      getOverlayUrl: ReturnType<typeof vi.fn>
       getPlugins: ReturnType<typeof vi.fn>
       getPluginPreferences: ReturnType<typeof vi.fn>
       setPluginPreferences: ReturnType<typeof vi.fn>
@@ -33,15 +31,12 @@ beforeEach(() => {
         stateChangeCallback = null
       }
     }),
-    onCommentEvent: vi.fn().mockReturnValue(() => {}),
-    getOverlayUrl: vi.fn().mockReturnValue('http://localhost:3939'),
     getPlugins: vi.fn().mockResolvedValue([
       {
         id: 'md3-comment-list',
         name: 'MD3 コメントリスト',
         version: '1.0.0',
-        renderer: true,
-        overlay: false,
+        overlay: true,
         builtIn: true,
         basePath: '/plugins/md3-comment-list'
       },
@@ -49,15 +44,12 @@ beforeEach(() => {
         id: 'nico-scroll',
         name: 'ニコニコ風スクロール',
         version: '1.0.0',
-        renderer: false,
         overlay: true,
         builtIn: true,
         basePath: '/plugins/nico-scroll'
       }
     ]),
     getPluginPreferences: vi.fn().mockResolvedValue({
-      activeRendererPlugin: 'md3-comment-list',
-      activeOverlayPlugin: 'nico-scroll',
       enabledEvents: ['comment', 'gift', 'emotion', 'notification', 'operatorComment']
     }),
     setPluginPreferences: vi.fn().mockResolvedValue(undefined)
@@ -66,24 +58,32 @@ beforeEach(() => {
 
 describe('App', () => {
   describe('初期状態', () => {
-    it('接続ボタンが表示されている', () => {
+    it('接続ボタンが表示されている', async () => {
       render(<App />)
+      await screen.findByText('MD3 コメントリスト')
       expect(screen.getByRole('button', { name: '接続' })).toBeInTheDocument()
     })
 
-    it('放送ID入力フィールドが空である', () => {
+    it('放送ID入力フィールドが空である', async () => {
       render(<App />)
+      await screen.findByText('MD3 コメントリスト')
       expect(screen.getByPlaceholderText('lv123456789')).toHaveValue('')
     })
 
-    it('OBS用URLはまだ表示されていない（未接続時）', () => {
+    it('表示プラグインセクションが表示されている', async () => {
       render(<App />)
-      expect(screen.queryByText('http://localhost:3939')).not.toBeInTheDocument()
+      await screen.findByText('MD3 コメントリスト')
+      expect(screen.getByText('表示プラグイン')).toBeInTheDocument()
     })
 
-    it('プラグイン設定セクションがロード後に表示される', async () => {
+    it('プラグインURLがロード後に表示される', async () => {
       render(<App />)
-      expect(await screen.findByText('プラグイン設定')).toBeInTheDocument()
+      expect(
+        await screen.findByText('http://localhost:3939/plugins/md3-comment-list/overlay/')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('http://localhost:3939/plugins/nico-scroll/overlay/')
+      ).toBeInTheDocument()
     })
   })
 
@@ -105,14 +105,6 @@ describe('App', () => {
   })
 
   describe('接続状態の表示', () => {
-    it('connected になるとOBS用URLが表示される', async () => {
-      render(<App />)
-      await act(() => {
-        stateChangeCallback?.('connected')
-      })
-      expect(screen.getByText('http://localhost:3939')).toBeInTheDocument()
-    })
-
     it('error になるとエラーメッセージが表示される', async () => {
       render(<App />)
       await act(() => {

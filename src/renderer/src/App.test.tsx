@@ -11,7 +11,11 @@ declare global {
       connect: ReturnType<typeof vi.fn>
       disconnect: ReturnType<typeof vi.fn>
       onStateChange: ReturnType<typeof vi.fn>
+      onCommentEvent: ReturnType<typeof vi.fn>
       getOverlayUrl: ReturnType<typeof vi.fn>
+      getPlugins: ReturnType<typeof vi.fn>
+      getPluginPreferences: ReturnType<typeof vi.fn>
+      setPluginPreferences: ReturnType<typeof vi.fn>
     }
   }
 }
@@ -29,7 +33,34 @@ beforeEach(() => {
         stateChangeCallback = null
       }
     }),
-    getOverlayUrl: vi.fn().mockReturnValue('http://localhost:3939')
+    onCommentEvent: vi.fn().mockReturnValue(() => {}),
+    getOverlayUrl: vi.fn().mockReturnValue('http://localhost:3939'),
+    getPlugins: vi.fn().mockResolvedValue([
+      {
+        id: 'md3-comment-list',
+        name: 'MD3 コメントリスト',
+        version: '1.0.0',
+        renderer: true,
+        overlay: false,
+        builtIn: true,
+        basePath: '/plugins/md3-comment-list'
+      },
+      {
+        id: 'nico-scroll',
+        name: 'ニコニコ風スクロール',
+        version: '1.0.0',
+        renderer: false,
+        overlay: true,
+        builtIn: true,
+        basePath: '/plugins/nico-scroll'
+      }
+    ]),
+    getPluginPreferences: vi.fn().mockResolvedValue({
+      activeRendererPlugin: 'md3-comment-list',
+      activeOverlayPlugin: 'nico-scroll',
+      enabledEvents: ['comment', 'gift', 'emotion', 'notification', 'operatorComment']
+    }),
+    setPluginPreferences: vi.fn().mockResolvedValue(undefined)
   }
 })
 
@@ -48,6 +79,11 @@ describe('App', () => {
     it('OBS用URLはまだ表示されていない（未接続時）', () => {
       render(<App />)
       expect(screen.queryByText('http://localhost:3939')).not.toBeInTheDocument()
+    })
+
+    it('プラグイン設定セクションが表示されている', () => {
+      render(<App />)
+      expect(screen.getByText('プラグイン設定')).toBeInTheDocument()
     })
   })
 

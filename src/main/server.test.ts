@@ -32,7 +32,6 @@ describe('server', () => {
       wsPort: TEST_WS_PORT
     })
     server.registerPluginRoute('nico-scroll', PLUGIN_PATH)
-    server.setOverlayRedirect('nico-scroll')
   })
 
   afterAll(async () => {
@@ -82,10 +81,12 @@ describe('server', () => {
   })
 
   describe('HTTP server', () => {
-    it('GET / がアクティブオーバーレイにリダイレクトする', async () => {
-      const res = await fetch(`http://localhost:${TEST_HTTP_PORT}/`, { redirect: 'manual' })
-      expect(res.status).toBe(302)
-      expect(res.headers.get('location')).toBe('/plugins/nico-scroll/overlay/')
+    it('GET / がプラグイン一覧を返す', async () => {
+      const res = await fetch(`http://localhost:${TEST_HTTP_PORT}/`)
+      expect(res.status).toBe(200)
+      const text = await res.text()
+      expect(text).toContain('NicomView Plugins')
+      expect(text).toContain('nico-scroll')
     })
 
     it('プラグインの静的ファイルを配信する', async () => {

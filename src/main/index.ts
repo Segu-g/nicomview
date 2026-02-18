@@ -4,20 +4,12 @@ import { NiconicoProvider } from 'nicomget'
 import { createServer, type CommentServer } from './server'
 import { CommentManager } from './commentManager'
 import { PluginManager } from './pluginManager'
-import type { CommentEventType, PluginPreferences } from '../shared/types'
+import type { PluginPreferences } from '../shared/types'
 
 let mainWindow: BrowserWindow | null = null
 let server: CommentServer | null = null
 let commentManager: CommentManager | null = null
 let pluginManager: PluginManager | null = null
-
-const RELAY_EVENTS: CommentEventType[] = [
-  'comment',
-  'gift',
-  'emotion',
-  'notification',
-  'operatorComment'
-]
 
 function getBuiltInPluginsPath(): string {
   if (app.isPackaged) {
@@ -33,7 +25,7 @@ function getExternalPluginsPath(): string {
 async function createWindow(): Promise<void> {
   mainWindow = new BrowserWindow({
     width: 480,
-    height: 800,
+    height: 600,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -64,10 +56,6 @@ async function createWindow(): Promise<void> {
         server.registerPluginRoute(plugin.id, fsPath)
       }
     }
-
-    // アクティブオーバーレイプラグインのリダイレクト設定
-    const prefs = pluginManager.getPreferences()
-    server.setOverlayRedirect(prefs.activeOverlayPlugin)
   } catch (err) {
     console.error('Failed to start server:', err)
   }
@@ -82,12 +70,6 @@ async function createWindow(): Promise<void> {
     (event, data) => {
       console.log(`[${event}]`, JSON.stringify(data))
       server?.broadcast(event, data)
-      // レンダラーにもコメント転送
-      mainWindow?.webContents.send('comment-event', {
-        type: event,
-        data,
-        timestamp: Date.now()
-      })
     },
     (state) => mainWindow?.webContents.send('state-change', state)
   )
@@ -111,10 +93,6 @@ async function createWindow(): Promise<void> {
 
   ipcMain.handle('set-plugin-preferences', (_event, prefs: Partial<PluginPreferences>) => {
     pluginManager?.setPreferences(prefs)
-    // オーバーレイプラグイン変更時はリダイレクトも更新
-    if (prefs.activeOverlayPlugin !== undefined) {
-      server?.setOverlayRedirect(prefs.activeOverlayPlugin)
-    }
   })
 
   // レンダラーのコンソールログをメインプロセスに転送（デバッグ用）

@@ -5,7 +5,6 @@ import http from 'http'
 export interface CommentServer {
   broadcast(event: string, data: unknown): void
   registerPluginRoute(pluginId: string, fsPath: string): void
-  setOverlayRedirect(pluginId: string | null): void
   close(): Promise<void>
 }
 
@@ -18,15 +17,13 @@ export async function createServer(options: ServerOptions = {}): Promise<Comment
   const { httpPort = 3939, wsPort = 3940 } = options
 
   const app = express()
-
-  let overlayRedirectPlugin: string | null = null
+  const pluginIds: string[] = []
 
   app.get('/', (_req, res) => {
-    if (overlayRedirectPlugin) {
-      res.redirect(`/plugins/${overlayRedirectPlugin}/overlay/`)
-    } else {
-      res.status(404).send('No active overlay plugin')
-    }
+    const links = pluginIds
+      .map((id) => `<li><a href="/plugins/${id}/overlay/">${id}</a></li>`)
+      .join('\n')
+    res.send(`<html><body><h1>NicomView Plugins</h1><ul>${links}</ul></body></html>`)
   })
 
   const httpServer = http.createServer(app)
@@ -46,11 +43,8 @@ export async function createServer(options: ServerOptions = {}): Promise<Comment
   }
 
   function registerPluginRoute(pluginId: string, fsPath: string): void {
+    pluginIds.push(pluginId)
     app.use(`/plugins/${pluginId}`, express.static(fsPath))
-  }
-
-  function setOverlayRedirect(pluginId: string | null): void {
-    overlayRedirectPlugin = pluginId
   }
 
   async function close(): Promise<void> {
@@ -68,5 +62,5 @@ export async function createServer(options: ServerOptions = {}): Promise<Comment
     })
   }
 
-  return { broadcast, registerPluginRoute, setOverlayRedirect, close }
+  return { broadcast, registerPluginRoute, close }
 }

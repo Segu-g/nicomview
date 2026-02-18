@@ -18,7 +18,6 @@ function isValidManifest(obj: unknown): obj is PluginManifest {
     m.id.length > 0 &&
     typeof m.name === 'string' &&
     typeof m.version === 'string' &&
-    typeof m.renderer === 'boolean' &&
     typeof m.overlay === 'boolean'
   )
 }
@@ -91,12 +90,6 @@ export class PluginManager {
   }
 
   setPreferences(partial: Partial<PluginPreferences>): void {
-    if (partial.activeRendererPlugin !== undefined) {
-      this.preferences.activeRendererPlugin = partial.activeRendererPlugin
-    }
-    if (partial.activeOverlayPlugin !== undefined) {
-      this.preferences.activeOverlayPlugin = partial.activeOverlayPlugin
-    }
     if (partial.enabledEvents !== undefined) {
       this.preferences.enabledEvents = partial.enabledEvents.filter(isValidEventType)
     }
@@ -107,15 +100,12 @@ export class PluginManager {
     const plugin = this.plugins.get(id)
     if (!plugin) return undefined
 
-    // Determine the actual filesystem path
     const dir = plugin.builtIn ? this.builtInDir : this.externalDir
     return path.join(dir, id)
   }
 
   private loadPreferences(): PluginPreferences {
     const defaults: PluginPreferences = {
-      activeRendererPlugin: 'md3-comment-list',
-      activeOverlayPlugin: 'nico-scroll',
       enabledEvents: [...ALL_EVENT_TYPES]
     }
 
@@ -123,14 +113,6 @@ export class PluginManager {
       if (fs.existsSync(this.preferencesPath)) {
         const raw = JSON.parse(fs.readFileSync(this.preferencesPath, 'utf-8'))
         return {
-          activeRendererPlugin:
-            typeof raw.activeRendererPlugin === 'string' || raw.activeRendererPlugin === null
-              ? raw.activeRendererPlugin
-              : defaults.activeRendererPlugin,
-          activeOverlayPlugin:
-            typeof raw.activeOverlayPlugin === 'string' || raw.activeOverlayPlugin === null
-              ? raw.activeOverlayPlugin
-              : defaults.activeOverlayPlugin,
           enabledEvents: Array.isArray(raw.enabledEvents)
             ? raw.enabledEvents.filter(isValidEventType)
             : defaults.enabledEvents

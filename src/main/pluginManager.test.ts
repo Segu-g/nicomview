@@ -41,8 +41,7 @@ describe('PluginManager', () => {
         id: 'test-plugin',
         name: 'Test Plugin',
         version: '1.0.0',
-        renderer: true,
-        overlay: false
+        overlay: true
       })
 
       const manager = new PluginManager(builtInDir, externalDir, userDataDir)
@@ -60,7 +59,6 @@ describe('PluginManager', () => {
         id: 'external-plugin',
         name: 'External Plugin',
         version: '0.1.0',
-        renderer: false,
         overlay: true
       })
 
@@ -78,14 +76,12 @@ describe('PluginManager', () => {
         id: 'builtin',
         name: 'Built-in',
         version: '1.0.0',
-        renderer: true,
-        overlay: false
+        overlay: true
       })
       writePluginManifest(externalDir, 'external', {
         id: 'external',
         name: 'External',
         version: '1.0.0',
-        renderer: false,
         overlay: true
       })
 
@@ -102,18 +98,16 @@ describe('PluginManager', () => {
     })
 
     it('不正なマニフェストをスキップする', () => {
-      // Missing required fields
       writePluginManifest(builtInDir, 'bad-plugin', {
         id: 'bad-plugin',
         name: 'Bad'
-        // missing version, renderer, overlay
+        // missing version, overlay
       })
       writePluginManifest(builtInDir, 'good-plugin', {
         id: 'good-plugin',
         name: 'Good',
         version: '1.0.0',
-        renderer: true,
-        overlay: false
+        overlay: true
       })
 
       const manager = new PluginManager(builtInDir, externalDir, userDataDir)
@@ -140,8 +134,7 @@ describe('PluginManager', () => {
         id: 'my-plugin',
         name: 'My Plugin',
         version: '1.0.0',
-        renderer: true,
-        overlay: false
+        overlay: true
       })
 
       const manager = new PluginManager(builtInDir, externalDir, userDataDir)
@@ -165,8 +158,6 @@ describe('PluginManager', () => {
       const manager = new PluginManager(builtInDir, externalDir, userDataDir)
 
       const prefs = manager.getPreferences()
-      expect(prefs.activeRendererPlugin).toBe('md3-comment-list')
-      expect(prefs.activeOverlayPlugin).toBe('nico-scroll')
       expect(prefs.enabledEvents).toEqual([
         'comment',
         'gift',
@@ -179,24 +170,12 @@ describe('PluginManager', () => {
     it('設定を保存・読み込みできる', () => {
       const manager1 = new PluginManager(builtInDir, externalDir, userDataDir)
       manager1.setPreferences({
-        activeRendererPlugin: 'custom-renderer',
         enabledEvents: ['comment', 'gift']
       })
 
-      // New instance reads from file
       const manager2 = new PluginManager(builtInDir, externalDir, userDataDir)
       const prefs = manager2.getPreferences()
-      expect(prefs.activeRendererPlugin).toBe('custom-renderer')
-      expect(prefs.activeOverlayPlugin).toBe('nico-scroll') // unchanged
       expect(prefs.enabledEvents).toEqual(['comment', 'gift'])
-    })
-
-    it('nullの activeRendererPlugin を保存できる', () => {
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
-      manager.setPreferences({ activeRendererPlugin: null })
-
-      const prefs = manager.getPreferences()
-      expect(prefs.activeRendererPlugin).toBeNull()
     })
 
     it('不正なイベントタイプをフィルタする', () => {
@@ -216,8 +195,7 @@ describe('PluginManager', () => {
         id: 'test-plugin',
         name: 'Test',
         version: '1.0.0',
-        renderer: true,
-        overlay: false
+        overlay: true
       })
 
       const manager = new PluginManager(builtInDir, externalDir, userDataDir)

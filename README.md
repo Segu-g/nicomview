@@ -1,30 +1,31 @@
 # NicomView
 
-ニコニコ生放送のコメントをリアルタイムに取得し、OBS のブラウザソースに表示するデスクトップアプリ。メインウィンドウでもコメントを確認できる。
+ニコニコ生放送のコメントをリアルタイムに取得し、OBS のブラウザソースやブラウザで表示するデスクトップアプリ。プラグインで表示形式を追加できる。
 
 ## 仕組み
 
 ```
-[ニコニコ生放送] → [nicomget] → [CommentManager] → [WebSocket :3940] → [OBS オーバーレイプラグイン]
+[ニコニコ生放送] → [nicomget] → [CommentManager] → [WebSocket :3940] → [プラグインオーバーレイ]
                                                    → [Express :3939]  → プラグイン静的配信
-                                                   → [IPC]           → レンダラープラグイン
 [設定 UI (React)] ←→ [IPC] ←→ [Electron メインプロセス] ←→ [PluginManager]
 ```
 
 1. アプリを起動し、放送 ID（例: `lv123456789`）を入力して「接続」
-2. メインウィンドウの MD3 コメントリストにコメントが表示される
-3. OBS のブラウザソースに `http://localhost:3939` を設定するとニコニコ風スクロール表示
+2. メインウィンドウに表示されるプラグイン URL を OBS ブラウザソースやブラウザで開く
+3. コメントがリアルタイムに表示される
 
 ## プラグインシステム
 
-表示方式をプラグインで差し替え可能。レンダラー（メインウィンドウ）とオーバーレイ（OBS）それぞれ独立に選択できる。
+すべての表示形式はプラグインとして提供される。各プラグインは HTTP 経由で配信され、OBS ブラウザソースや通常のブラウザで表示できる。
 
 ### ビルトインプラグイン
 
-| プラグイン | 種別 | 説明 |
+| プラグイン | URL | 説明 |
 |---|---|---|
-| MD3 コメントリスト | レンダラー | MUI リスト形式でコメント表示（自動スクロール・200件上限） |
-| ニコニコ風スクロール | オーバーレイ | 右から左に流れるニコニコ風コメント（OBS 用） |
+| MD3 コメントリスト | `http://localhost:3939/plugins/md3-comment-list/overlay/` | ダークテーマのリスト形式（自動スクロール・200件上限） |
+| ニコニコ風スクロール | `http://localhost:3939/plugins/nico-scroll/overlay/` | 右から左に流れるニコニコ風コメント |
+
+プラグイン一覧は `http://localhost:3939/` でも確認できる。
 
 ### イベントフィルタ
 
@@ -39,8 +40,7 @@
 ```
 my-plugin/
 ├── plugin.json      # マニフェスト（必須）
-├── renderer.js      # レンダラーエントリ（renderer: true の場合）
-└── overlay/         # オーバーレイファイル（overlay: true の場合）
+└── overlay/         # オーバーレイファイル
     └── index.html
 ```
 
@@ -52,10 +52,11 @@ my-plugin/
   "name": "マイプラグイン",
   "version": "1.0.0",
   "description": "カスタム表示プラグイン",
-  "renderer": true,
-  "overlay": false
+  "overlay": true
 }
 ```
+
+オーバーレイは WebSocket (`ws://localhost:3940`) に接続し、JSON メッセージ `{ "event": "comment", "data": { ... } }` を受信してコメントを描画する。
 
 ## 技術スタック
 
@@ -63,7 +64,7 @@ my-plugin/
 |---|---|
 | デスクトップ | Electron 33 + electron-vite 5 |
 | 設定 UI | React 18 + MUI 7 (Material Design 3) |
-| OBS 配信 | Express (HTTP :3939) + ws (WebSocket :3940) |
+| プラグイン配信 | Express (HTTP :3939) + ws (WebSocket :3940) |
 | コメント取得 | [nicomget](https://github.com/Segu-g/nicomget) |
 | テスト | Vitest + Testing Library + Playwright (E2E) |
 | ビルド | electron-builder |
@@ -107,32 +108,32 @@ src/
 │   └── index.ts                  # contextBridge (IPC ブリッジ)
 └── renderer/
     └── src/
-        ├── App.tsx               # メイン UI
+        ├── App.tsx               # 設定 UI（接続・プラグインURL・イベントフィルタ）
         ├── main.tsx              # React エントリーポイント
-        ├── components/
-        │   ├── PluginHost.tsx     # プラグインマウント・ライフサイクル管理
-        │   ├── PluginSelector.tsx # プラグイン選択 UI
-        │   └── EventFilter.tsx   # イベントフィルタ UI
-        └── plugins/
-            └── md3-comment-list/
-                └── renderer.tsx  # MD3 コメントリストプラグイン
+        └── components/
+            └── EventFilter.tsx   # イベントフィルタ UI
 
 resources/plugins/
 ├── md3-comment-list/
-│   └── plugin.json
+│   ├── plugin.json
+│   └── overlay/
+│       ├── index.html            # コメントリスト表示画面
+│       └── overlay.js            # WebSocket 受信・リスト描画
 └── nico-scroll/
     ├── plugin.json
     └── overlay/
-        ├── index.html            # OBS ブラウザソース用画面
+        ├── index.html            # ニコニコ風スクロール画面
         └── overlay.js            # WebSocket 受信・コメント描画
 ```
 
 ## OBS の設定
 
 1. ソースの追加 → **ブラウザ** を選択
-2. URL に `http://localhost:3939` を入力
+2. URL にプラグインの URL を入力（例: `http://localhost:3939/plugins/nico-scroll/overlay/`）
 3. 幅・高さを配信解像度に合わせる（例: 1920x1080）
 4. **カスタム CSS** は空のままで OK（背景は自動で透過）
+
+複数プラグインを同時に使用可能（例: スクロール + コメントリスト）。
 
 ### コメントのカスタマイズ
 

@@ -6,7 +6,7 @@
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
-    "build:plugins": "npx vite-node scripts/build-plugins.ts",
+    "build:plugins": "tsx scripts/build-plugins.ts",
     "build": "npm run build:plugins && electron-vite build",
     "preview": "electron-vite preview",
     "test": "vitest run",

@@ -1,3 +1,5 @@
+:root { --font-size: 14px; }
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
@@ -23,7 +25,7 @@ body {
   display: flex;
   align-items: flex-start;
   padding: 6px 12px;
-  font-size: 14px;
+  font-size: var(--font-size);
   line-height: 1.5;
   border-bottom: 1px solid rgba(255,255,255,0.06);
   animation: fadeIn 0.2s ease;
@@ -32,8 +34,8 @@ body {
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 .comment-item .user-icon {
-  width: 24px;
-  height: 24px;
+  width: calc(var(--font-size) * 1.7);
+  height: calc(var(--font-size) * 1.7);
   border-radius: 50%;
   margin-right: 8px;
   flex-shrink: 0;
@@ -47,7 +49,7 @@ body {
 .comment-item .username {
   color: #9e9e9e;
   margin-right: 8px;
-  font-size: 12px;
+  font-size: calc(var(--font-size) * 0.85);
 }
 
 .comment-item .content {
@@ -65,7 +67,7 @@ body {
   border: 1px solid #ffa726;
   border-radius: 12px;
   padding: 0 8px;
-  font-size: 12px;
+  font-size: calc(var(--font-size) * 0.85);
   color: #ffa726;
   margin-left: 6px;
 }

@@ -17,8 +17,7 @@ import {
   Alert,
   List,
   ListItem,
-  ListItemText,
-  ListItemSecondaryAction
+  ListItemText
 } from '@mui/material'
 import {
   ContentCopy as CopyIcon,
@@ -77,6 +76,7 @@ function App(): JSX.Element {
   const [plugins, setPlugins] = useState<PluginDescriptor[]>([])
   const [preferences, setPreferences] = useState<PluginPreferences>(defaultPreferences)
   const [pluginsLoaded, setPluginsLoaded] = useState(false)
+  const [fontSizes, setFontSizes] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const unsubscribe = window.commentViewerAPI.onStateChange((state: ConnectionState) => {
@@ -105,12 +105,17 @@ function App(): JSX.Element {
     await window.commentViewerAPI.disconnect()
   }, [])
 
+  const buildPluginUrl = useCallback((pluginId: string) => {
+    const base = `${BASE_URL}/plugins/${pluginId}/overlay/`
+    const fs = fontSizes[pluginId]
+    return fs ? `${base}?fontSize=${fs}` : base
+  }, [fontSizes])
+
   const handleCopyUrl = useCallback(async (pluginId: string) => {
-    const url = `${BASE_URL}/plugins/${pluginId}/overlay/`
-    await navigator.clipboard.writeText(url)
+    await navigator.clipboard.writeText(buildPluginUrl(pluginId))
     setCopiedId(pluginId)
     setTimeout(() => setCopiedId(null), 2000)
-  }, [])
+  }, [buildPluginUrl])
 
   const handlePreferencesChange = useCallback(
     async (partial: Partial<PluginPreferences>) => {
@@ -216,19 +221,30 @@ function App(): JSX.Element {
             </Typography>
             <List dense disablePadding>
               {plugins.filter((p) => p.overlay).map((plugin) => (
-                <ListItem key={plugin.id} sx={{ px: 0 }}>
+                <ListItem key={plugin.id} sx={{ px: 0, flexWrap: 'wrap' }}>
                   <ListItemText
                     primary={plugin.name}
-                    secondary={`${BASE_URL}/plugins/${plugin.id}/overlay/`}
+                    secondary={buildPluginUrl(plugin.id)}
                     secondaryTypographyProps={{ fontFamily: 'monospace', fontSize: 12 }}
                   />
-                  <ListItemSecondaryAction>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <TextField
+                      size="small"
+                      label="fontSize"
+                      type="number"
+                      value={fontSizes[plugin.id] ?? ''}
+                      onChange={(e) =>
+                        setFontSizes((prev) => ({ ...prev, [plugin.id]: e.target.value }))
+                      }
+                      slotProps={{ htmlInput: { min: 1 } }}
+                      sx={{ width: 100 }}
+                    />
                     <Tooltip title={copiedId === plugin.id ? 'コピーしました' : 'URLをコピー'}>
-                      <IconButton edge="end" onClick={() => handleCopyUrl(plugin.id)} size="small">
+                      <IconButton onClick={() => handleCopyUrl(plugin.id)} size="small">
                         <CopyIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                  </ListItemSecondaryAction>
+                  </Box>
                 </ListItem>
               ))}
             </List>

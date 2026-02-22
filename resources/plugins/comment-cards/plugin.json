@@ -1,0 +1,8 @@
+{
+  "id": "comment-cards",
+  "name": "通知カード",
+  "version": "1.0.0",
+  "description": "通知ポップアップ風のコメントカード表示（OBSオーバーレイ）",
+  "renderer": false,
+  "overlay": true
+}

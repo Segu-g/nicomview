@@ -4,7 +4,7 @@ import { resolve } from 'path'
 
 const rootDir = resolve(import.meta.dirname, '..')
 
-const plugins = ['nico-scroll', 'md3-comment-list']
+const plugins = ['nico-scroll', 'md3-comment-list', 'comment-cards']
 
 async function buildPlugins() {
   for (const pluginId of plugins) {

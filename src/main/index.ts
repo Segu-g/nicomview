@@ -115,12 +115,10 @@ async function createWindow(): Promise<void> {
 
 app.whenReady().then(createWindow)
 
-app.on('window-all-closed', async () => {
+app.on('window-all-closed', () => {
   commentManager?.disconnect()
-  if (server) {
-    await server.close()
-  }
-  app.quit()
+  const cleanup = server ? server.close() : Promise.resolve()
+  cleanup.finally(() => app.quit())
 })
 
 app.on('activate', () => {

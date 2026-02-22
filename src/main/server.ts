@@ -62,6 +62,9 @@ export async function createServer(options: ServerOptions = {}): Promise<Comment
   }
 
   async function close(): Promise<void> {
+    for (const client of wss.clients) {
+      client.terminate()
+    }
     await new Promise<void>((resolve, reject) => {
       wss.close((err) => {
         if (err) reject(err)

@@ -73,29 +73,29 @@ export function CommentCards() {
 
   useWebSocket(WS_URL, handleMessage)
 
-  // Overflow detection: after each render, check if container overflows
+  // Overflow detection: mark one oldest card as exiting at a time.
+  // Wait for current exit animation to finish before marking another.
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
 
-    // Keep removing oldest visible card until no overflow
+    const hasExiting = cards.some((c) => c.exiting)
+    if (hasExiting) return
+
     if (el.scrollHeight > el.clientHeight) {
-      setCards((prev) => {
-        const visibleCards = prev.filter((c) => !c.exiting)
-        if (visibleCards.length === 0) return prev
+      const visibleCards = cards.filter((c) => !c.exiting)
+      if (visibleCards.length === 0) return
 
-        const oldest = visibleCards[visibleCards.length - 1]
-        // Clear its timer since we're forcing exit
-        const timer = timersRef.current.get(oldest.id)
-        if (timer) {
-          clearTimeout(timer)
-          timersRef.current.delete(oldest.id)
-        }
+      const oldest = visibleCards[visibleCards.length - 1]
+      const timer = timersRef.current.get(oldest.id)
+      if (timer) {
+        clearTimeout(timer)
+        timersRef.current.delete(oldest.id)
+      }
 
-        return prev.map((c) => (c.id === oldest.id ? { ...c, exiting: true } : c))
-      })
+      markExiting(oldest.id)
     }
-  }, [cards])
+  }, [cards, markExiting])
 
   const handleAnimationEnd = useCallback(
     (cardId: number, e: React.AnimationEvent) => {

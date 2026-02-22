@@ -34,8 +34,7 @@ body {
   background: rgba(30, 30, 30, 0.9);
   border-radius: 12px;
   padding: 10px 14px;
-  max-width: 360px;
-  width: max-content;
+  width: 100%;
   font-size: var(--font-size);
   animation: slideIn 0.35s ease-out forwards;
   flex-shrink: 0;

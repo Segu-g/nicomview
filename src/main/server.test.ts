@@ -1,5 +1,5 @@
 import path from 'path'
-import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll, afterEach } from 'vitest'
 import { createServer, type CommentServer } from './server'
 import WebSocket from 'ws'
 
@@ -19,6 +19,19 @@ function connectWs(port: number): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(`ws://localhost:${port}`)
     ws.on('open', () => resolve(ws))
+    ws.on('error', reject)
+  })
+}
+
+/** Connect and eagerly collect all messages from the start (avoids race with history replay). */
+function connectAndCollect(port: number): Promise<{ ws: WebSocket; messages: unknown[] }> {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(`ws://localhost:${port}`)
+    const messages: unknown[] = []
+    ws.on('message', (raw) => {
+      messages.push(JSON.parse(raw.toString()))
+    })
+    ws.on('open', () => resolve({ ws, messages }))
     ws.on('error', reject)
   })
 }
@@ -96,6 +109,63 @@ describe('server', () => {
       expect(res.status).toBe(200)
       const text = await res.text()
       expect(text).toContain('NicomView Overlay')
+    })
+  })
+})
+
+describe('history replay', () => {
+  const HISTORY_HTTP_PORT = 14939
+  const HISTORY_WS_PORT = 14940
+  let server: CommentServer
+  let clients: WebSocket[]
+
+  beforeEach(async () => {
+    server = await createServer({
+      httpPort: HISTORY_HTTP_PORT,
+      wsPort: HISTORY_WS_PORT
+    })
+    clients = []
+  })
+
+  afterEach(async () => {
+    for (const client of clients) {
+      client.close()
+    }
+    await server.close()
+  })
+
+  it('新規接続時に過去のコメントを isHistory: true 付きで送信する', async () => {
+    server.broadcast('comment', { content: 'history-a' })
+    server.broadcast('comment', { content: 'history-b' })
+
+    const { ws, messages } = await connectAndCollect(HISTORY_WS_PORT)
+    clients = [ws]
+
+    // wait for history messages to arrive
+    await vi.waitFor(() => expect(messages).toHaveLength(2))
+
+    expect(messages[0]).toEqual({ event: 'comment', data: { content: 'history-a', isHistory: true } })
+    expect(messages[1]).toEqual({ event: 'comment', data: { content: 'history-b', isHistory: true } })
+  })
+
+  it('バッファが200件を超えたら古いものが消える', async () => {
+    for (let i = 0; i < 202; i++) {
+      server.broadcast('comment', { content: `msg-${i}` })
+    }
+
+    const { ws, messages } = await connectAndCollect(HISTORY_WS_PORT)
+    clients = [ws]
+
+    await vi.waitFor(() => expect(messages).toHaveLength(200))
+
+    // oldest 2 (msg-0, msg-1) were shifted out
+    expect(messages[0]).toEqual({
+      event: 'comment',
+      data: { content: 'msg-2', isHistory: true }
+    })
+    expect(messages[199]).toEqual({
+      event: 'comment',
+      data: { content: 'msg-201', isHistory: true }
     })
   })
 })

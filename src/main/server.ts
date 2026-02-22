@@ -28,12 +28,26 @@ export async function createServer(options: ServerOptions = {}): Promise<Comment
 
   const httpServer = http.createServer(app)
   const wss = new WebSocketServer({ port: wsPort })
+  const historyBuffer: { event: string; data: unknown }[] = []
+  const HISTORY_MAX = 200
+
+  wss.on('connection', (client) => {
+    for (const entry of historyBuffer) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({ event: entry.event, data: { ...(entry.data as Record<string, unknown>), isHistory: true } }))
+      }
+    }
+  })
 
   await new Promise<void>((resolve) => {
     httpServer.listen(httpPort, resolve)
   })
 
   function broadcast(event: string, data: unknown): void {
+    historyBuffer.push({ event, data })
+    if (historyBuffer.length > HISTORY_MAX) {
+      historyBuffer.shift()
+    }
     const message = JSON.stringify({ event, data })
     for (const client of wss.clients) {
       if (client.readyState === WebSocket.OPEN) {

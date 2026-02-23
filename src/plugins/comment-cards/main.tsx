@@ -13,4 +13,9 @@ if (duration) {
   document.documentElement.style.setProperty('--duration', duration + 's')
 }
 
+const theme = params.get('theme')
+if (theme) {
+  document.documentElement.dataset.theme = theme
+}
+
 createRoot(document.getElementById('root')!).render(<CommentCards />)

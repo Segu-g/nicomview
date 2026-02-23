@@ -17,12 +17,16 @@ import {
   Alert,
   List,
   ListItem,
-  ListItemText
+  ListItemText,
+  ToggleButton,
+  ToggleButtonGroup
 } from '@mui/material'
 import {
   ContentCopy as CopyIcon,
   ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
+  ExpandLess as ExpandLessIcon,
+  DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon
 } from '@mui/icons-material'
 import type {
   ConnectionState,
@@ -77,6 +81,7 @@ function App(): JSX.Element {
   const [preferences, setPreferences] = useState<PluginPreferences>(defaultPreferences)
   const [pluginsLoaded, setPluginsLoaded] = useState(false)
   const [fontSizes, setFontSizes] = useState<Record<string, string>>({})
+  const [pluginTheme, setPluginTheme] = useState<'dark' | 'light'>('dark')
 
   useEffect(() => {
     const unsubscribe = window.commentViewerAPI.onStateChange((state: ConnectionState) => {
@@ -107,9 +112,13 @@ function App(): JSX.Element {
 
   const buildPluginUrl = useCallback((pluginId: string) => {
     const base = `${BASE_URL}/plugins/${pluginId}/overlay/`
+    const params = new URLSearchParams()
     const fs = fontSizes[pluginId]
-    return fs ? `${base}?fontSize=${fs}` : base
-  }, [fontSizes])
+    if (fs) params.set('fontSize', fs)
+    if (pluginTheme !== 'dark') params.set('theme', pluginTheme)
+    const qs = params.toString()
+    return qs ? `${base}?${qs}` : base
+  }, [fontSizes, pluginTheme])
 
   const handleCopyUrl = useCallback(async (pluginId: string) => {
     await navigator.clipboard.writeText(buildPluginUrl(pluginId))
@@ -219,6 +228,26 @@ function App(): JSX.Element {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
               以下のURLをOBSブラウザソースやブラウザで開くとコメントが表示されます
             </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                テーマ
+              </Typography>
+              <ToggleButtonGroup
+                value={pluginTheme}
+                exclusive
+                onChange={(_e, value) => { if (value) setPluginTheme(value) }}
+                size="small"
+              >
+                <ToggleButton value="dark">
+                  <DarkModeIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                  ダーク
+                </ToggleButton>
+                <ToggleButton value="light">
+                  <LightModeIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                  ライト
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
             <List dense disablePadding>
               {plugins.filter((p) => p.overlay).map((plugin) => (
                 <ListItem key={plugin.id} sx={{ px: 0, flexWrap: 'wrap' }}>

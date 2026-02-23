@@ -1,6 +1,23 @@
 :root {
   --font-size: 28px;
   --duration: 60s;
+  --text-primary: #e0e0e0;
+  --text-secondary: #9e9e9e;
+  --card-bg: rgba(30, 30, 30, 0.9);
+  --placeholder-bg: #555;
+  --operator-accent: #ce93d8;
+  --operator-bg: rgba(156, 39, 176, 0.25);
+  --operator-border: rgba(206, 147, 216, 0.4);
+}
+
+[data-theme="light"] {
+  --text-primary: #212121;
+  --text-secondary: #757575;
+  --card-bg: rgba(255, 255, 255, 0.92);
+  --placeholder-bg: #bdbdbd;
+  --operator-accent: #7b1fa2;
+  --operator-bg: rgba(156, 39, 176, 0.1);
+  --operator-border: rgba(156, 39, 176, 0.3);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -8,7 +25,7 @@
 body {
   font-family: 'Noto Sans JP', 'Roboto', sans-serif;
   background: transparent;
-  color: #e0e0e0;
+  color: var(--text-primary);
   height: 100vh;
   overflow: hidden;
   display: flex;
@@ -58,7 +75,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(30, 30, 30, 0.9);
+  background: var(--card-bg);
   border-radius: 12px;
   padding: 10px 14px;
   width: 100%;
@@ -93,7 +110,7 @@ body {
 }
 
 .card .avatar.placeholder {
-  background: #555;
+  background: var(--placeholder-bg);
 }
 
 /* --- Body --- */
@@ -105,7 +122,7 @@ body {
 
 .card .username {
   font-size: calc(var(--font-size) * 0.85);
-  color: #9e9e9e;
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -113,7 +130,7 @@ body {
 }
 
 .card .content {
-  color: #e0e0e0;
+  color: var(--text-primary);
   line-height: 1.5;
   word-break: break-word;
 }
@@ -121,11 +138,17 @@ body {
 /* --- Operator highlight --- */
 
 .card.operator {
-  background: rgba(156, 39, 176, 0.25);
-  border: 1px solid rgba(206, 147, 216, 0.4);
+  background: var(--operator-bg);
+  border: 1px solid var(--operator-border);
 }
 
 .card.operator .content {
-  color: #ce93d8;
+  color: var(--operator-accent);
   font-weight: bold;
+}
+
+/* --- Light theme card shadow --- */
+
+[data-theme="light"] .card {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }

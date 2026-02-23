@@ -1,27 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useWebSocket } from '../hooks/useWebSocket'
+import {
+  useCommentEvents,
+  type CommentData,
+  type GiftData,
+  type NotificationData,
+  type OperatorCommentData,
+  type EmotionData,
+} from '../hooks/useCommentEvents'
 import './styles.css'
 
-const WS_URL = 'ws://localhost:3940'
 const MAX_COMMENTS = 200
 const SCROLL_THRESHOLD = 50
 
-interface CommentData {
-  content?: string
-  message?: string
-  userName?: string
-  userId?: string
-  userIcon?: string
-  itemName?: string
-  point?: number
-  id?: string
-  isHistory?: boolean
-}
+type EntryData = CommentData | GiftData | NotificationData | OperatorCommentData | EmotionData
 
 interface CommentEntry {
   key: number
   eventType: string
-  data: CommentData
+  data: EntryData
 }
 
 function UserIcon({ src }: { src?: string }) {
@@ -34,24 +30,26 @@ function CommentItem({ entry }: { entry: CommentEntry }) {
 
   switch (eventType) {
     case 'comment': {
-      const name = data.userName || '匿名'
+      const d = data as CommentData
+      const name = d.userName || '匿名'
       return (
-        <div className={`comment-item${data.isHistory ? ' history' : ''}`}>
-          <UserIcon src={data.userIcon} />
+        <div className={`comment-item${d.isHistory ? ' history' : ''}`}>
+          <UserIcon src={d.userIcon} />
           <div className="comment-body">
             <span className="username">{name}</span>
-            <span className="content">{data.content || ''}</span>
+            <span className="content">{d.content || ''}</span>
           </div>
         </div>
       )
     }
 
     case 'gift': {
-      const giftName = data.userName || '匿名'
-      const label = (data.itemName || 'ギフト') + (data.point ? ` ${data.point}pt` : '')
+      const d = data as GiftData
+      const giftName = d.userName || '匿名'
+      const label = (d.itemName || 'ギフト') + (d.point ? ` ${d.point}pt` : '')
       return (
-        <div className={`comment-item gift${data.isHistory ? ' history' : ''}`}>
-          <UserIcon src={data.userIcon} />
+        <div className={`comment-item gift${d.isHistory ? ' history' : ''}`}>
+          <UserIcon src={d.userIcon} />
           <div className="comment-body">
             <span className="icon">🎁</span>
             <span className="content">{giftName}</span>
@@ -61,35 +59,41 @@ function CommentItem({ entry }: { entry: CommentEntry }) {
       )
     }
 
-    case 'notification':
+    case 'notification': {
+      const d = data as NotificationData
       return (
-        <div className={`comment-item notification${data.isHistory ? ' history' : ''}`}>
+        <div className={`comment-item notification${d.isHistory ? ' history' : ''}`}>
           <div className="comment-body">
             <span className="icon">ℹ️</span>
-            <span className="content">{data.message || JSON.stringify(data)}</span>
+            <span className="content">{d.message || JSON.stringify(d)}</span>
           </div>
         </div>
       )
+    }
 
-    case 'operatorComment':
+    case 'operatorComment': {
+      const d = data as OperatorCommentData
       return (
-        <div className={`comment-item operator${data.isHistory ? ' history' : ''}`}>
+        <div className={`comment-item operator${d.isHistory ? ' history' : ''}`}>
           <div className="comment-body">
             <span className="icon">📢</span>
-            <span className="content">{data.content || JSON.stringify(data)}</span>
+            <span className="content">{d.content || JSON.stringify(d)}</span>
           </div>
         </div>
       )
+    }
 
-    case 'emotion':
+    case 'emotion': {
+      const d = data as EmotionData
       return (
-        <div className={`comment-item emotion${data.isHistory ? ' history' : ''}`}>
+        <div className={`comment-item emotion${d.isHistory ? ' history' : ''}`}>
           <div className="comment-body">
             <span className="icon">😄</span>
-            <span className="content">{data.content || data.id || 'エモーション'}</span>
+            <span className="content">{d.content || d.id || 'エモーション'}</span>
           </div>
         </div>
       )
+    }
 
     default:
       return null
@@ -102,18 +106,21 @@ export function CommentList() {
   const autoScrollRef = useRef(true)
   const nextKey = useRef(0)
 
-  const handleMessage = useCallback((event: string, data: unknown) => {
-    const validEvents = ['comment', 'gift', 'notification', 'operatorComment', 'emotion']
-    if (!validEvents.includes(event)) return
-
+  const addEntry = useCallback((eventType: string, data: EntryData) => {
     const key = nextKey.current++
     setComments((prev) => {
-      const next = [...prev, { key, eventType: event, data: data as CommentData }]
+      const next = [...prev, { key, eventType, data }]
       return next.length > MAX_COMMENTS ? next.slice(next.length - MAX_COMMENTS) : next
     })
   }, [])
 
-  useWebSocket(WS_URL, handleMessage)
+  useCommentEvents({
+    onComment: useCallback((data: CommentData) => addEntry('comment', data), [addEntry]),
+    onGift: useCallback((data: GiftData) => addEntry('gift', data), [addEntry]),
+    onNotification: useCallback((data: NotificationData) => addEntry('notification', data), [addEntry]),
+    onOperatorComment: useCallback((data: OperatorCommentData) => addEntry('operatorComment', data), [addEntry]),
+    onEmotion: useCallback((data: EmotionData) => addEntry('emotion', data), [addEntry]),
+  })
 
   const handleScroll = useCallback(() => {
     const el = listRef.current

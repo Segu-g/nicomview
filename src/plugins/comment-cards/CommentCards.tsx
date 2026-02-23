@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useWebSocket } from '../hooks/useWebSocket'
+import { useCommentEvents, type CommentData, type OperatorCommentData } from '../hooks/useCommentEvents'
 import './styles.css'
-
-const WS_URL = 'ws://localhost:3940'
 
 interface CardData {
   id: number
@@ -41,26 +39,18 @@ export function CommentCards() {
     [markExiting],
   )
 
-  const handleMessage = useCallback(
-    (event: string, data: unknown) => {
-      if (event !== 'comment' && event !== 'operatorComment') return
+  const addCard = useCallback(
+    (data: CommentData | OperatorCommentData, type: 'comment' | 'operator') => {
+      if (data.isHistory) return
 
-      const d = data as {
-        content?: string
-        userName?: string
-        userIcon?: string
-        isHistory?: boolean
-      }
-
-      if (d.isHistory) return
-
+      const d = data as CommentData
       const id = nextId++
       const card: CardData = {
         id,
         username: d.userName || '匿名',
         content: d.content || '',
         iconUrl: d.userIcon,
-        type: event === 'operatorComment' ? 'operator' : 'comment',
+        type,
         exiting: false,
       }
 
@@ -70,7 +60,10 @@ export function CommentCards() {
     [scheduleExit],
   )
 
-  useWebSocket(WS_URL, handleMessage)
+  useCommentEvents({
+    onComment: useCallback((data: CommentData) => addCard(data, 'comment'), [addCard]),
+    onOperatorComment: useCallback((data: OperatorCommentData) => addCard(data, 'operator'), [addCard]),
+  })
 
   const handleAnimationEnd = useCallback(
     (cardId: number, e: React.AnimationEvent) => {

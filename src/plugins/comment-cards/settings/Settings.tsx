@@ -1,14 +1,16 @@
 import { useEffect, useState, useCallback } from 'react'
 import type { PluginSettings, PluginSettingsMessage } from '../../../shared/types'
 
+const DEFAULTS = { fontSize: 28, theme: 'dark', duration: 60 }
+
 interface Props {
   pluginId: string
 }
 
 export function Settings({ pluginId }: Props) {
-  const [fontSize, setFontSize] = useState('')
-  const [theme, setTheme] = useState('dark')
-  const [duration, setDuration] = useState('')
+  const [fontSize, setFontSize] = useState(String(DEFAULTS.fontSize))
+  const [theme, setTheme] = useState(DEFAULTS.theme)
+  const [duration, setDuration] = useState(String(DEFAULTS.duration))
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -16,9 +18,9 @@ export function Settings({ pluginId }: Props) {
       const msg = e.data as PluginSettingsMessage
       if (msg?.type === 'nicomview:settings-init') {
         const s = msg.settings
-        if (s.fontSize != null) setFontSize(String(s.fontSize))
-        if (s.theme != null) setTheme(String(s.theme))
-        if (s.duration != null) setDuration(String(s.duration))
+        setFontSize(String(s.fontSize ?? DEFAULTS.fontSize))
+        setTheme(String(s.theme ?? DEFAULTS.theme))
+        setDuration(String(s.duration ?? DEFAULTS.duration))
         setReady(true)
       }
     }
@@ -26,13 +28,6 @@ export function Settings({ pluginId }: Props) {
     window.parent.postMessage({ type: 'nicomview:ready', pluginId }, '*')
     return () => window.removeEventListener('message', handler)
   }, [pluginId])
-
-  const buildSettings = useCallback((): PluginSettings => {
-    const settings: PluginSettings = { theme }
-    if (fontSize) settings.fontSize = Number(fontSize)
-    if (duration) settings.duration = Number(duration)
-    return settings
-  }, [fontSize, theme, duration])
 
   const sendUpdate = useCallback(
     (settings: PluginSettings) => {
@@ -46,25 +41,23 @@ export function Settings({ pluginId }: Props) {
 
   const handleFontSizeChange = (value: string) => {
     setFontSize(value)
-    const settings: PluginSettings = { theme }
+    const settings: PluginSettings = { theme, duration: Number(duration) }
     if (value) settings.fontSize = Number(value)
-    if (duration) settings.duration = Number(duration)
     sendUpdate(settings)
   }
 
   const handleThemeChange = (value: string) => {
     setTheme(value)
-    const settings: PluginSettings = { theme: value }
+    const settings: PluginSettings = { theme: value, duration: Number(duration) }
     if (fontSize) settings.fontSize = Number(fontSize)
-    if (duration) settings.duration = Number(duration)
     sendUpdate(settings)
   }
 
   const handleDurationChange = (value: string) => {
     setDuration(value)
-    const settings = buildSettings()
+    const settings: PluginSettings = { theme }
+    if (fontSize) settings.fontSize = Number(fontSize)
     if (value) settings.duration = Number(value)
-    else delete (settings as Record<string, unknown>).duration
     sendUpdate(settings)
   }
 
@@ -78,7 +71,6 @@ export function Settings({ pluginId }: Props) {
           type="number"
           min={1}
           value={fontSize}
-          placeholder="28"
           onChange={(e) => handleFontSizeChange(e.target.value)}
         />
       </label>
@@ -95,7 +87,6 @@ export function Settings({ pluginId }: Props) {
           type="number"
           min={1}
           value={duration}
-          placeholder="60"
           onChange={(e) => handleDurationChange(e.target.value)}
         />
       </label>

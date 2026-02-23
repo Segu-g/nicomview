@@ -1,13 +1,15 @@
 import { useEffect, useState, useCallback } from 'react'
 import type { PluginSettings, PluginSettingsMessage } from '../../../shared/types'
 
+const DEFAULTS = { fontSize: 28, theme: 'dark' }
+
 interface Props {
   pluginId: string
 }
 
 export function Settings({ pluginId }: Props) {
-  const [fontSize, setFontSize] = useState('')
-  const [theme, setTheme] = useState('dark')
+  const [fontSize, setFontSize] = useState(String(DEFAULTS.fontSize))
+  const [theme, setTheme] = useState(DEFAULTS.theme)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -15,8 +17,8 @@ export function Settings({ pluginId }: Props) {
       const msg = e.data as PluginSettingsMessage
       if (msg?.type === 'nicomview:settings-init') {
         const s = msg.settings
-        if (s.fontSize != null) setFontSize(String(s.fontSize))
-        if (s.theme != null) setTheme(String(s.theme))
+        setFontSize(String(s.fontSize ?? DEFAULTS.fontSize))
+        setTheme(String(s.theme ?? DEFAULTS.theme))
         setReady(true)
       }
     }
@@ -59,7 +61,6 @@ export function Settings({ pluginId }: Props) {
           type="number"
           min={1}
           value={fontSize}
-          placeholder="28"
           onChange={(e) => handleFontSizeChange(e.target.value)}
         />
       </label>

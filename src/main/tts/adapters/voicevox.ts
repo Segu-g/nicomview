@@ -2,7 +2,18 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import { execFile } from 'child_process'
+import type { TtsAdapterParamDef } from '../../../shared/types'
 import type { TtsAdapter } from '../types'
+
+interface VoicevoxStyle {
+  name: string
+  id: number
+}
+
+interface VoicevoxSpeaker {
+  name: string
+  styles: VoicevoxStyle[]
+}
 
 export class VoicevoxAdapter implements TtsAdapter {
   readonly id = 'voicevox'
@@ -23,6 +34,53 @@ export class VoicevoxAdapter implements TtsAdapter {
     if (settings.host !== undefined) this.host = String(settings.host)
     if (settings.port !== undefined) this.port = Number(settings.port)
     if (settings.speakerId !== undefined) this.speakerId = Number(settings.speakerId)
+  }
+
+  async getParamDefs(): Promise<TtsAdapterParamDef[]> {
+    const defs: TtsAdapterParamDef[] = [
+      {
+        key: 'host',
+        label: 'ホスト',
+        type: 'string',
+        defaultValue: 'localhost'
+      },
+      {
+        key: 'port',
+        label: 'ポート',
+        type: 'number',
+        defaultValue: 50021,
+        min: 1,
+        max: 65535,
+        step: 1
+      }
+    ]
+
+    // キャラクター（話者）一覧を動的に取得
+    const speakerDef: TtsAdapterParamDef = {
+      key: 'speakerId',
+      label: 'キャラクター',
+      type: 'select',
+      defaultValue: 0,
+      options: []
+    }
+
+    try {
+      const res = await fetch(`http://${this.host}:${this.port}/speakers`)
+      if (res.ok) {
+        const speakers = (await res.json()) as VoicevoxSpeaker[]
+        speakerDef.options = speakers.flatMap((speaker) =>
+          speaker.styles.map((style) => ({
+            value: style.id,
+            label: `${speaker.name} (${style.name})`
+          }))
+        )
+      }
+    } catch {
+      // VOICEVOX未起動時は空のオプションで返す
+    }
+
+    defs.push(speakerDef)
+    return defs
   }
 
   async speak(text: string, speed: number, volume: number): Promise<void> {

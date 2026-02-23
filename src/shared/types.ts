@@ -51,6 +51,22 @@ export interface TtsAdapterInfo {
   defaultSettings: Record<string, string | number | boolean>
 }
 
+export interface TtsAdapterParamOption {
+  value: string | number
+  label: string
+}
+
+export interface TtsAdapterParamDef {
+  key: string
+  label: string
+  type: 'string' | 'number' | 'select'
+  defaultValue: string | number
+  min?: number
+  max?: number
+  step?: number
+  options?: TtsAdapterParamOption[]
+}
+
 export interface CommentViewerAPI {
   connect(liveId: string, cookies?: string): Promise<void>
   disconnect(): Promise<void>
@@ -63,4 +79,5 @@ export interface CommentViewerAPI {
   getTtsSettings(): Promise<TtsSettings>
   setTtsSettings(settings: Partial<TtsSettings>): Promise<void>
   getTtsAdapters(): Promise<TtsAdapterInfo[]>
+  getTtsAdapterParams(adapterId: string): Promise<TtsAdapterParamDef[]>
 }

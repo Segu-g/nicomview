@@ -9,6 +9,8 @@ function createMockAdapter(): TtsAdapter {
     defaultSettings: {},
     speak: vi.fn<(text: string, speed: number, volume: number) => Promise<void>>().mockResolvedValue(undefined),
     isAvailable: vi.fn<() => Promise<boolean>>().mockResolvedValue(true),
+    getParamDefs: vi.fn().mockResolvedValue([]),
+    updateSettings: vi.fn(),
     dispose: vi.fn()
   }
 }

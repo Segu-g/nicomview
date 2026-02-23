@@ -124,6 +124,10 @@ async function createWindow(): Promise<void> {
     return ttsManager?.getAdapterInfos() ?? []
   })
 
+  ipcMain.handle('get-tts-adapter-params', async (_event, adapterId: string) => {
+    return (await ttsManager?.getAdapterParams(adapterId)) ?? []
+  })
+
   // レンダラーのコンソールログをメインプロセスに転送（デバッグ用）
   mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
     const prefix = ['LOG', 'WARN', 'ERROR'][level] || 'LOG'

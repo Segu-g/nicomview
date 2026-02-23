@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import type { CommentEventType, TtsSettings, TtsAdapterInfo } from '../../shared/types'
+import type { CommentEventType, TtsSettings, TtsAdapterInfo, TtsAdapterParamDef } from '../../shared/types'
 import { ALL_EVENT_TYPES } from '../../shared/types'
 import type { TtsAdapter } from './types'
 import { TtsQueue } from './queue'
@@ -28,6 +28,7 @@ export class TtsManager {
   registerAdapter(adapter: TtsAdapter): void {
     this.adapters.set(adapter.id, adapter)
     if (this.settings.adapterId === adapter.id) {
+      adapter.updateSettings(this.settings.adapterSettings)
       this.queue.setAdapter(adapter)
     }
   }
@@ -67,10 +68,18 @@ export class TtsManager {
     }
     if (partial.adapterSettings !== undefined) {
       this.settings.adapterSettings = { ...partial.adapterSettings }
+      const currentAdapter = this.adapters.get(this.settings.adapterId)
+      currentAdapter?.updateSettings(this.settings.adapterSettings)
     }
 
     this.queue.setParams(this.settings.speed, this.settings.volume)
     this.saveSettings()
+  }
+
+  async getAdapterParams(adapterId: string): Promise<TtsAdapterParamDef[]> {
+    const adapter = this.adapters.get(adapterId)
+    if (!adapter) return []
+    return adapter.getParamDefs()
   }
 
   getAdapterInfos(): TtsAdapterInfo[] {

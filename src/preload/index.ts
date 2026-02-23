@@ -6,6 +6,7 @@ import type {
   PluginSettings,
   TtsSettings,
   TtsAdapterInfo,
+  TtsAdapterParamDef,
   CommentViewerAPI
 } from '../shared/types'
 
@@ -58,6 +59,10 @@ const api: CommentViewerAPI = {
 
   getTtsAdapters(): Promise<TtsAdapterInfo[]> {
     return ipcRenderer.invoke('get-tts-adapters')
+  },
+
+  getTtsAdapterParams(adapterId: string): Promise<TtsAdapterParamDef[]> {
+    return ipcRenderer.invoke('get-tts-adapter-params', adapterId)
   }
 }
 

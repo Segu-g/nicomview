@@ -12,6 +12,11 @@ function createMockAdapter(id = 'mock', name = 'Mock'): TtsAdapter {
     defaultSettings: { host: 'localhost', port: 50021 },
     speak: vi.fn<(text: string, speed: number, volume: number) => Promise<void>>().mockResolvedValue(undefined),
     isAvailable: vi.fn<() => Promise<boolean>>().mockResolvedValue(true),
+    getParamDefs: vi.fn().mockResolvedValue([
+      { key: 'host', label: 'ホスト', type: 'string', defaultValue: 'localhost' },
+      { key: 'port', label: 'ポート', type: 'number', defaultValue: 50021 }
+    ]),
+    updateSettings: vi.fn(),
     dispose: vi.fn()
   }
 }
@@ -128,6 +133,40 @@ describe('TtsManager', () => {
     manager.dispose()
 
     expect(adapter.dispose).toHaveBeenCalled()
+  })
+
+  it('getAdapterParams が登録済みアダプターのパラメーター定義を返す', async () => {
+    const adapter = createMockAdapter()
+    manager.registerAdapter(adapter)
+
+    const params = await manager.getAdapterParams('mock')
+    expect(params).toHaveLength(2)
+    expect(params[0].key).toBe('host')
+    expect(params[1].key).toBe('port')
+  })
+
+  it('getAdapterParams は未登録のアダプターIDに対して空配列を返す', async () => {
+    const params = await manager.getAdapterParams('unknown')
+    expect(params).toEqual([])
+  })
+
+  it('setSettings で adapterSettings を変更するとアダプターの updateSettings が呼ばれる', () => {
+    const adapter = createMockAdapter()
+    manager.registerAdapter(adapter)
+    manager.setSettings({ adapterId: 'mock' })
+
+    manager.setSettings({ adapterSettings: { host: '192.168.1.1', port: 8080 } })
+
+    expect(adapter.updateSettings).toHaveBeenCalledWith({ host: '192.168.1.1', port: 8080 })
+  })
+
+  it('registerAdapter 時に保存済み adapterSettings がアダプターに反映される', () => {
+    manager.setSettings({ adapterId: 'mock', adapterSettings: { host: '10.0.0.1' } })
+
+    const adapter = createMockAdapter()
+    manager.registerAdapter(adapter)
+
+    expect(adapter.updateSettings).toHaveBeenCalledWith({ host: '10.0.0.1' })
   })
 
   it('setSettings で adapterId を変更するとアダプターが切り替わる', async () => {

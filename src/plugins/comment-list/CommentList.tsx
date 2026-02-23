@@ -108,8 +108,9 @@ export function CommentList() {
 
   const addEntry = useCallback((eventType: string, data: EntryData) => {
     const key = nextKey.current++
+    const entry = { key, eventType, data }
     setComments((prev) => {
-      const next = [...prev, { key, eventType, data }]
+      const next = data.isHistory ? [entry, ...prev] : [...prev, entry]
       return next.length > MAX_COMMENTS ? next.slice(next.length - MAX_COMMENTS) : next
     })
   }, [])

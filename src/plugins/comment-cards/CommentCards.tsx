@@ -1,13 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useCommentEvents, type CommentData, type OperatorCommentData } from '../hooks/useCommentEvents'
+import {
+  useCommentEvents,
+  type CommentData,
+  type GiftData,
+  type NotificationData,
+  type OperatorCommentData,
+  type EmotionData,
+} from '../hooks/useCommentEvents'
 import './styles.css'
+
+type CardType = 'comment' | 'operator' | 'gift' | 'notification' | 'emotion'
 
 interface CardData {
   id: number
   username: string
   content: string
   iconUrl?: string
-  type: 'comment' | 'operator'
+  type: CardType
   exiting: boolean
 }
 
@@ -39,35 +48,63 @@ export function CommentCards() {
     [markExiting],
   )
 
-  const addCard = useCallback(
-    (data: CommentData | OperatorCommentData, type: 'comment' | 'operator') => {
-      if (data.isHistory) return
-
-      const d = data as CommentData
+  const pushCard = useCallback(
+    (card: Omit<CardData, 'id' | 'exiting'>, isHistory?: boolean) => {
+      if (isHistory) return
       const id = nextId++
-      const card: CardData = {
-        id,
-        username: d.userName || '匿名',
-        content: d.content || '',
-        iconUrl: d.userIcon,
-        type,
-        exiting: false,
-      }
-
-      setCards((prev) => [card, ...prev])
+      setCards((prev) => [{ ...card, id, exiting: false }, ...prev])
       scheduleExit(id, getDuration())
     },
     [scheduleExit],
   )
 
   useCommentEvents({
-    onComment: useCallback((data: CommentData) => addCard(data, 'comment'), [addCard]),
-    onOperatorComment: useCallback((data: OperatorCommentData) => addCard(data, 'operator'), [addCard]),
+    onComment: useCallback((data: CommentData) => {
+      pushCard({
+        username: data.userName || '匿名',
+        content: data.content || '',
+        iconUrl: data.userIcon,
+        type: 'comment',
+      }, data.isHistory)
+    }, [pushCard]),
+
+    onOperatorComment: useCallback((data: OperatorCommentData) => {
+      pushCard({
+        username: '運営',
+        content: data.content || '',
+        type: 'operator',
+      }, data.isHistory)
+    }, [pushCard]),
+
+    onGift: useCallback((data: GiftData) => {
+      const label = (data.itemName || 'ギフト') + (data.point ? ` ${data.point}pt` : '')
+      pushCard({
+        username: data.userName || '匿名',
+        content: label,
+        iconUrl: data.userIcon,
+        type: 'gift',
+      }, data.isHistory)
+    }, [pushCard]),
+
+    onNotification: useCallback((data: NotificationData) => {
+      pushCard({
+        username: '通知',
+        content: data.message || '',
+        type: 'notification',
+      }, data.isHistory)
+    }, [pushCard]),
+
+    onEmotion: useCallback((data: EmotionData) => {
+      pushCard({
+        username: 'エモーション',
+        content: data.content || data.id || '',
+        type: 'emotion',
+      }, data.isHistory)
+    }, [pushCard]),
   })
 
   const handleAnimationEnd = useCallback(
     (cardId: number, e: React.AnimationEvent) => {
-      // Remove after the slot collapse animation completes
       if (e.animationName === 'slotCollapse') {
         removeCard(cardId)
       }
@@ -75,7 +112,6 @@ export function CommentCards() {
     [removeCard],
   )
 
-  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       timersRef.current.forEach((timer) => clearTimeout(timer))
@@ -90,7 +126,7 @@ export function CommentCards() {
           className={`card-slot${card.exiting ? ' exiting' : ''}`}
           onAnimationEnd={(e) => handleAnimationEnd(card.id, e)}
         >
-          <div className={`card${card.type === 'operator' ? ' operator' : ''}`}>
+          <div className={`card ${card.type}`}>
             {card.iconUrl ? (
               <img className="avatar" src={card.iconUrl} alt="" />
             ) : (

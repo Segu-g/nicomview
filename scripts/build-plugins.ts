@@ -21,19 +21,17 @@ async function buildPlugins() {
     })
     console.log(`Done: ${pluginId}`)
 
-    const settingsHtml = resolve(rootDir, 'src/plugins', pluginId, 'settings.html')
+    const settingsDir = resolve(rootDir, 'src/plugins', pluginId, 'settings')
+    const settingsHtml = resolve(settingsDir, 'index.html')
     if (existsSync(settingsHtml)) {
       console.log(`\nBuilding settings: ${pluginId}`)
       await build({
-        root: resolve(rootDir, 'src/plugins', pluginId),
+        root: settingsDir,
         base: './',
         plugins: [react()],
         build: {
           outDir: resolve(rootDir, 'resources/plugins', pluginId, 'settings'),
           emptyOutDir: true,
-          rollupOptions: {
-            input: settingsHtml,
-          },
         },
       })
       console.log(`Done settings: ${pluginId}`)

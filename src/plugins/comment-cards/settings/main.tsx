@@ -1,9 +1,9 @@
 import { createRoot } from 'react-dom/client'
 import { Settings } from './Settings'
-import './settings.css'
+import './styles.css'
 
 const params = new URLSearchParams(location.search)
-const pluginId = params.get('pluginId') ?? 'comment-list'
+const pluginId = params.get('pluginId') ?? 'comment-cards'
 
 createRoot(document.getElementById('root')!).render(
   <Settings pluginId={pluginId} />

@@ -84,6 +84,9 @@ my-plugin/
 # 依存関係のインストール
 npm install
 
+# プラグインのビルド（初回必須）
+npm run build:plugins
+
 # 開発サーバー起動
 npm run dev
 ```

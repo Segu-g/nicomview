@@ -22,7 +22,7 @@
 
 | プラグイン | URL | 説明 |
 |---|---|---|
-| コメントリスト | `http://localhost:3939/plugins/comment-list/overlay/` | ダークテーマのリスト形式（自動スクロール・200件上限） |
+| コメントリスト | `http://localhost:3939/plugins/comment-list/overlay/` | リスト形式（自動スクロール・200件上限） |
 | 通知カード | `http://localhost:3939/plugins/comment-cards/overlay/` | 通知ポップアップ風のカード表示（右からスライドイン・自動退場） |
 
 プラグイン一覧は `http://localhost:3939/` でも確認できる。
@@ -143,6 +143,9 @@ resources/plugins/
 |---|---|---|---|
 | `fontSize` | 両方 | フォントサイズ (px) | `?fontSize=24` |
 | `duration` | 通知カードのみ | カード表示時間 (秒、デフォルト 60) | `?duration=10` |
+| `theme` | 両方 | テーマ (`dark` / `light`、デフォルト `dark`) | `?theme=light` |
+
+設定 UI のテーマ切替トグルからも変更でき、コピーされる URL に自動で反映される。
 
 ## リリース
 

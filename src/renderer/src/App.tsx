@@ -106,6 +106,9 @@ function App(): JSX.Element {
   const [ttsAdapters, setTtsAdapters] = useState<TtsAdapterInfo[]>([])
   const [ttsParamDefs, setTtsParamDefs] = useState<TtsAdapterParamDef[]>([])
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [showEngineSettings, setShowEngineSettings] = useState(true)
+  const [showEventSettings, setShowEventSettings] = useState(false)
+  const [showAudioSettings, setShowAudioSettings] = useState(false)
 
   useEffect(() => {
     const unsubscribe = window.commentViewerAPI.onStateChange((state: ConnectionState) => {
@@ -417,6 +420,16 @@ function App(): JSX.Element {
                 />
               </Box>
 
+              <Box
+                sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', mb: 0.5 }}
+                onClick={() => setShowEngineSettings(!showEngineSettings)}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  エンジン設定
+                </Typography>
+                {showEngineSettings ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+              </Box>
+              <Collapse in={showEngineSettings}>
               {ttsAdapters.length > 0 && (
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="caption" color="text.secondary">
@@ -513,7 +526,18 @@ function App(): JSX.Element {
                   })}
                 </Box>
               )}
+              </Collapse>
 
+              <Box
+                sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', mb: 0.5 }}
+                onClick={() => setShowEventSettings(!showEventSettings)}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  イベント設定
+                </Typography>
+                {showEventSettings ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+              </Box>
+              <Collapse in={showEventSettings}>
               <Box sx={{ mb: 2 }}>
                 <Typography variant="caption" color="text.secondary">
                   読み上げ対象イベント
@@ -594,7 +618,18 @@ function App(): JSX.Element {
                   )
                 })}
               </Box>
+              </Collapse>
 
+              <Box
+                sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', mb: 0.5 }}
+                onClick={() => setShowAudioSettings(!showAudioSettings)}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  音声調整
+                </Typography>
+                {showAudioSettings ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+              </Box>
+              <Collapse in={showAudioSettings}>
               <Box sx={{ mb: 1 }}>
                 <Typography variant="caption" color="text.secondary">
                   速度: {ttsSettings.speed.toFixed(1)}
@@ -624,6 +659,7 @@ function App(): JSX.Element {
                   onChangeCommitted={(_e, v) => handleTtsChange({ volume: v as number })}
                 />
               </Box>
+              </Collapse>
             </CardContent>
           </Card>
         )}

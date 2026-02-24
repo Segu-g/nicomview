@@ -197,7 +197,7 @@ src/plugins/
 `v*` タグをプッシュすると GitHub Actions が自動でビルド・リリースを作成する。
 
 ```bash
-git tag v1.0.0
+git tag v1.3.0
 git push --tags
 ```
 

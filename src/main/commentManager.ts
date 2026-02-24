@@ -63,6 +63,14 @@ export class CommentManager {
       this.onStateChange('error')
     })
 
+    this.provider.on('end', () => {
+      if (this.provider) {
+        this.provider.removeAllListeners()
+        this.provider = null
+      }
+      this.onStateChange('disconnected')
+    })
+
     await this.provider.connect()
   }
 

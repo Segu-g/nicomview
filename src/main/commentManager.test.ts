@@ -149,5 +149,22 @@ describe('CommentManager', () => {
 
       expect(stateChangeFn).toHaveBeenCalledWith('error')
     })
+
+    it('nicomget の end イベントで disconnected に遷移する', async () => {
+      await manager.connect('lv123456789')
+      stateChangeFn.mockClear()
+
+      mockProvider.emit('end')
+
+      expect(stateChangeFn).toHaveBeenCalledWith('disconnected')
+    })
+
+    it('end イベント後に disconnect() を呼んでもエラーにならない', async () => {
+      await manager.connect('lv123456789')
+
+      mockProvider.emit('end')
+
+      expect(() => manager.disconnect()).not.toThrow()
+    })
   })
 })

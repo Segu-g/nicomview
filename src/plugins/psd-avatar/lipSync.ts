@@ -1,34 +1,39 @@
+type LipSyncState = 'closed' | 'opening' | 'open' | 'closing'
+
 export class LipSync {
   private analyser: AnalyserNode
   private dataArray: Uint8Array
-  private history: number[]
-  private sensitivity: number
   private threshold: number
+  private holdFrames: number
+  private step: number
   private animId: number | null = null
   private _level = 0
+  private state: LipSyncState = 'closed'
+  private silentCount = 0
 
   constructor(
     audioContext: AudioContext,
     source: AudioNode,
-    opts: { threshold?: number; sensitivity?: number } = {}
+    opts: { threshold?: number; holdFrames?: number; transitionFrames?: number } = {}
   ) {
     this.threshold = opts.threshold ?? 0.15
-    this.sensitivity = opts.sensitivity ?? 3
+    this.holdFrames = opts.holdFrames ?? 8
+    this.step = 4 / (opts.transitionFrames ?? 4)
 
     this.analyser = audioContext.createAnalyser()
     this.analyser.fftSize = 256
     source.connect(this.analyser)
 
     this.dataArray = new Uint8Array(this.analyser.frequencyBinCount)
-    this.history = []
   }
 
   get level(): number {
-    return this._level
+    return Math.round(this._level)
   }
 
   start(): void {
     if (this.animId !== null) return
+
     const update = (): void => {
       this.analyser.getByteTimeDomainData(this.dataArray)
 
@@ -38,14 +43,40 @@ export class LipSync {
         sum += v * v
       }
       const rms = Math.sqrt(sum / this.dataArray.length)
+      const speaking = rms > this.threshold
 
-      this.history.push(rms)
-      if (this.history.length > this.sensitivity) {
-        this.history.shift()
+      switch (this.state) {
+        case 'closed':
+          if (speaking) this.state = 'opening'
+          break
+
+        case 'opening':
+          this._level = Math.min(4, this._level + this.step)
+          if (this._level >= 4) {
+            this._level = 4
+            this.state = 'open'
+          }
+          break
+
+        case 'open':
+          if (speaking) {
+            this.silentCount = 0
+          } else if (++this.silentCount > this.holdFrames) {
+            this.state = 'closing'
+            this.silentCount = 0
+          }
+          break
+
+        case 'closing':
+          this._level = Math.max(0, this._level - this.step)
+          if (speaking) {
+            this.state = 'opening'
+          } else if (this._level <= 0) {
+            this._level = 0
+            this.state = 'closed'
+          }
+          break
       }
-
-      const avg = this.history.reduce((a, b) => a + b, 0) / this.history.length
-      this._level = amplitudeToLevel(avg, this.threshold)
 
       this.animId = requestAnimationFrame(update)
     }
@@ -58,18 +89,12 @@ export class LipSync {
       this.animId = null
     }
     this._level = 0
-    this.history = []
+    this.state = 'closed'
+    this.silentCount = 0
   }
 
   destroy(): void {
     this.stop()
     this.analyser.disconnect()
   }
-}
-
-function amplitudeToLevel(amp: number, threshold: number): number {
-  if (amp <= threshold) return 0
-  const range = Math.max(threshold * 2, 0.1)
-  const normalized = Math.min((amp - threshold) / range, 1)
-  return Math.min(4, Math.ceil(normalized * 4))
 }

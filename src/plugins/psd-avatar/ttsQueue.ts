@@ -10,6 +10,7 @@ export interface TtsQueueOptions {
   volume: number
   threshold: number
   sensitivity: number
+  mouthTransitionFrames: number
   onLipLevel: (level: number) => void
   onSpeakStart?: () => void
   onSpeakEnd?: () => void
@@ -73,7 +74,8 @@ export class TtsQueue {
 
     const lipSync = new LipSync(ctx, gainNode, {
       threshold: this.opts.threshold,
-      sensitivity: this.opts.sensitivity,
+      holdFrames: this.opts.sensitivity,
+      transitionFrames: this.opts.mouthTransitionFrames,
     })
     this.currentLipSync = lipSync
 

@@ -10,7 +10,8 @@ const DEFAULTS: Record<string, string | number> = {
   speed: 1.0,
   volume: 1.0,
   threshold: 0.15,
-  sensitivity: 3,
+  sensitivity: 8,
+  mouthTransitionFrames: 4,
   blinkInterval: 3,
   blinkSpeed: 6,
   mouth0: '', mouth1: '', mouth2: '', mouth3: '', mouth4: '',
@@ -406,14 +407,25 @@ export function Settings({ pluginId }: Props) {
           />
         </label>
         <label className="settings-label">
-          感度（移動平均フレーム数）
+          閉口遅延（フレーム数）
+          <input
+            type="number"
+            min={1}
+            max={60}
+            step={1}
+            value={settings.sensitivity}
+            onChange={(e) => update('sensitivity', Number(e.target.value))}
+          />
+        </label>
+        <label className="settings-label">
+          口パク速度（遷移フレーム数）
           <input
             type="number"
             min={1}
             max={30}
             step={1}
-            value={settings.sensitivity}
-            onChange={(e) => update('sensitivity', Number(e.target.value))}
+            value={settings.mouthTransitionFrames}
+            onChange={(e) => update('mouthTransitionFrames', Number(e.target.value))}
           />
         </label>
       </div>

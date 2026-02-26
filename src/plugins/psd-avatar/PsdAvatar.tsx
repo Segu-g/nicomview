@@ -13,6 +13,7 @@ export interface PsdAvatarProps {
   eye: string[]
   threshold: number
   sensitivity: number
+  mouthTransitionFrames: number
   blinkInterval: number
   blinkSpeed: number
   layerVisibility: Record<string, boolean>
@@ -179,6 +180,7 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
       volume: props.volume,
       threshold: props.threshold,
       sensitivity: props.sensitivity,
+      mouthTransitionFrames: props.mouthTransitionFrames,
       onLipLevel: (level) => {
         const target = props.preview && level === 0 ? -1 : level
         if (mouthLevelRef.current !== target) {
@@ -189,7 +191,7 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
     })
     ttsQueueRef.current = queue
     return () => queue.destroy()
-  }, [props.voicevoxHost, props.speaker, props.speed, props.volume, props.threshold, props.sensitivity, requestRender])
+  }, [props.voicevoxHost, props.speaker, props.speed, props.volume, props.threshold, props.sensitivity, props.mouthTransitionFrames, requestRender])
 
   // Eye blink timer (disabled in preview mode)
   useEffect(() => {

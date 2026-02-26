@@ -68,9 +68,8 @@ export class LipSync {
 }
 
 function amplitudeToLevel(amp: number, threshold: number): number {
-  if (amp < threshold) return 0
-  if (amp < 0.3) return 1
-  if (amp < 0.5) return 2
-  if (amp < 0.7) return 3
-  return 4
+  if (amp <= threshold) return 0
+  const range = Math.max(threshold * 2, 0.1)
+  const normalized = Math.min((amp - threshold) / range, 1)
+  return Math.min(4, Math.ceil(normalized * 4))
 }

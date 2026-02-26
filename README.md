@@ -25,6 +25,7 @@
 |---|---|---|
 | コメントリスト | `http://localhost:3939/plugins/comment-list/overlay/` | リスト形式（自動スクロール・200件上限） |
 | 通知カード | `http://localhost:3939/plugins/comment-cards/overlay/` | カード表示（コメント・ギフト・通知・エモーション・運営コメント対応、右からスライドイン・自動退場） |
+| PSD アバター | `http://localhost:3939/plugins/psd-avatar/overlay/` | PSD ファイルを使った 2D アバター（目パチ・口パク・VOICEVOX リップシンク） |
 
 プラグイン一覧は `http://localhost:3939/` でも確認できる。
 
@@ -162,9 +163,20 @@ src/plugins/
 │       ├── index.html
 │       ├── main.tsx
 │       └── Settings.tsx
-└── comment-cards/
-    ├── main.tsx
-    ├── CommentCards.tsx
+├── comment-cards/
+│   ├── main.tsx
+│   ├── CommentCards.tsx
+│   └── settings/
+│       ├── index.html
+│       ├── main.tsx
+│       └── Settings.tsx
+└── psd-avatar/
+    ├── main.tsx                  # オーバーレイエントリ
+    ├── PsdAvatar.tsx             # アバター描画（Canvas）
+    ├── psdLoader.ts              # ag-psd による PSD パース
+    ├── lipSync.ts                # 発話検出 + 開口/閉口アニメーション
+    ├── ttsQueue.ts               # VOICEVOX 読み上げキュー
+    ├── voicevoxClient.ts         # VOICEVOX REST API クライアント
     └── settings/
         ├── index.html
         ├── main.tsx
@@ -206,6 +218,7 @@ git push --tags
 - Node.js >= 18
 - ポート 3939, 3940 が未使用であること
 - TTS を使う場合: VOICEVOX または棒読みちゃんが起動していること
+- PSD アバタープラグインを使う場合: VOICEVOX が起動していること
 
 ## ライセンス
 

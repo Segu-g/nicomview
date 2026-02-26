@@ -15,6 +15,7 @@ export default defineConfig({
         usage: resolve(__dirname, 'usage.html'),
         'plugin-dev': resolve(__dirname, 'plugin-dev.html'),
         tts: resolve(__dirname, 'tts.html'),
+        'psd-avatar': resolve(__dirname, 'psd-avatar.html'),
       },
       output: {
         entryFileNames: `assets/[name].js`,

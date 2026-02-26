@@ -1,4 +1,4 @@
-import{j as e,L as s,c as n}from"./style.js";function i(){return e.jsxs(s,{title:"プラグイン開発",children:[e.jsx("h1",{children:"プラグイン開発"}),e.jsxs("section",{children:[e.jsx("h2",{children:"概要"}),e.jsx("p",{children:"NicomView のすべての表示形式はプラグインとして提供されます。各プラグインは HTTP 経由で配信され、OBS ブラウザソースや通常のブラウザで表示できます。"}),e.jsxs("p",{children:["外部プラグインを作成して ",e.jsx("code",{children:"userData/plugins/"})," ","に配置すれば、自動で読み込まれます。"]})]}),e.jsxs("section",{children:[e.jsx("h2",{children:"ディレクトリ構成"}),e.jsx("pre",{children:e.jsx("code",{children:`my-plugin/
+import{j as e,L as s,c as n}from"./Layout.js";/* empty css     */function i(){return e.jsxs(s,{title:"プラグイン開発",children:[e.jsx("h1",{children:"プラグイン開発"}),e.jsxs("section",{children:[e.jsx("h2",{children:"概要"}),e.jsx("p",{children:"NicomView のすべての表示形式はプラグインとして提供されます。各プラグインは HTTP 経由で配信され、OBS ブラウザソースや通常のブラウザで表示できます。"}),e.jsxs("p",{children:["外部プラグインを作成して ",e.jsx("code",{children:"userData/plugins/"})," ","に配置すれば、自動で読み込まれます。"]})]}),e.jsxs("section",{children:[e.jsx("h2",{children:"ディレクトリ構成"}),e.jsx("pre",{children:e.jsx("code",{children:`my-plugin/
 ├── plugin.json      # マニフェスト（必須）
 ├── overlay/         # オーバーレイファイル
 │   └── index.html

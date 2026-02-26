@@ -19,10 +19,14 @@ export interface PsdAvatarProps {
   preview?: boolean
 }
 
+type RenderItem =
+  | { kind: 'segment'; canvas: HTMLCanvasElement }
+  | { kind: 'dynamic'; role: 'eye' | 'mouth'; layer: PsdLayer }
+
 interface ResolvedLayers {
-  base: PsdLayer[]
-  mouth: (PsdLayer | null)[]
+  sequence: RenderItem[]
   eye: (PsdLayer | null)[]
+  mouth: (PsdLayer | null)[]
 }
 
 /** Fill null entries with the nearest non-null neighbor */
@@ -42,7 +46,7 @@ function fillNearestNeighbor<T>(arr: (T | null)[]): (T | null)[] {
   return result
 }
 
-function resolveLayers(
+function buildRenderSequence(
   psd: PsdData,
   mouthPaths: string[],
   eyePaths: string[],
@@ -52,17 +56,41 @@ function resolveLayers(
   const mouthSet = new Set(mouthPaths.filter(Boolean))
   const eyeSet = new Set(eyePaths.filter(Boolean))
 
-  const base = leafLayers.filter((l) => {
-    const visible = l.path in layerVisibility ? layerVisibility[l.path] : !l.hidden
-    return visible && !mouthSet.has(l.path) && !eyeSet.has(l.path)
-  })
-  const rawMouth = mouthPaths.map((p) => (p ? leafLayers.find((l) => l.path === p) ?? null : null))
+  const sequence: RenderItem[] = []
+  let segmentLayers: PsdLayer[] = []
+
+  const flushSegment = (): void => {
+    if (segmentLayers.length === 0) return
+    const offscreen = document.createElement('canvas')
+    offscreen.width = psd.width
+    offscreen.height = psd.height
+    const ctx = offscreen.getContext('2d')!
+    for (const layer of segmentLayers) drawLayer(ctx, layer)
+    sequence.push({ kind: 'segment', canvas: offscreen })
+    segmentLayers = []
+  }
+
+  for (const layer of leafLayers) {
+    if (eyeSet.has(layer.path)) {
+      flushSegment()
+      sequence.push({ kind: 'dynamic', role: 'eye', layer })
+    } else if (mouthSet.has(layer.path)) {
+      flushSegment()
+      sequence.push({ kind: 'dynamic', role: 'mouth', layer })
+    } else {
+      const visible = layer.path in layerVisibility ? layerVisibility[layer.path] : !layer.hidden
+      if (visible) segmentLayers.push(layer)
+    }
+  }
+  flushSegment()
+
   const rawEye = eyePaths.map((p) => (p ? leafLayers.find((l) => l.path === p) ?? null : null))
+  const rawMouth = mouthPaths.map((p) => (p ? leafLayers.find((l) => l.path === p) ?? null : null))
 
   return {
-    base,
-    mouth: fillNearestNeighbor(rawMouth),
+    sequence,
     eye: fillNearestNeighbor(rawEye),
+    mouth: fillNearestNeighbor(rawMouth),
   }
 }
 
@@ -74,17 +102,6 @@ function drawLayer(ctx: CanvasRenderingContext2D, layer: PsdLayer): void {
   ctx.globalAlpha = prevAlpha
 }
 
-/** Pre-render base layers to an offscreen canvas */
-function buildBaseCanvas(width: number, height: number, layers: PsdLayer[]): HTMLCanvasElement {
-  const offscreen = document.createElement('canvas')
-  offscreen.width = width
-  offscreen.height = height
-  const ctx = offscreen.getContext('2d')!
-  for (const layer of layers) {
-    drawLayer(ctx, layer)
-  }
-  return offscreen
-}
 
 export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -94,32 +111,32 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
   const eyeFrameRef = useRef(props.preview ? -1 : 0)
   const ttsQueueRef = useRef<TtsQueue | null>(null)
   const resolvedRef = useRef<ResolvedLayers | null>(null)
-  const baseCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const pendingFrameRef = useRef<number | null>(null)
   const prevMouthRef = useRef(-1)
   const prevEyeRef = useRef(-1)
 
-  // Render once — composites base (offscreen) + current eye + current mouth
+  // Render once — draws sequence in z-order, activating the current eye/mouth frame
   const render = useCallback(() => {
     pendingFrameRef.current = null
     const canvas = canvasRef.current
     const resolved = resolvedRef.current
-    const baseCanvas = baseCanvasRef.current
-    if (!canvas || !resolved || !baseCanvas) return
+    if (!canvas || !resolved) return
 
     const ctx = canvas.getContext('2d')!
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-    // Draw pre-rendered base
-    ctx.drawImage(baseCanvas, 0, 0)
+    const activeEye = resolved.eye[eyeFrameRef.current]
+    const activeMouth = resolved.mouth[mouthLevelRef.current]
 
-    // Draw current eye layer
-    const eyeLayer = resolved.eye[eyeFrameRef.current]
-    if (eyeLayer) drawLayer(ctx, eyeLayer)
-
-    // Draw current mouth layer
-    const mouthLayer = resolved.mouth[mouthLevelRef.current]
-    if (mouthLayer) drawLayer(ctx, mouthLayer)
+    for (const item of resolved.sequence) {
+      if (item.kind === 'segment') {
+        ctx.drawImage(item.canvas, 0, 0)
+      } else if (item.role === 'eye') {
+        if (activeEye === item.layer) drawLayer(ctx, item.layer)
+      } else {
+        if (activeMouth === item.layer) drawLayer(ctx, item.layer)
+      }
+    }
 
     prevMouthRef.current = mouthLevelRef.current
     prevEyeRef.current = eyeFrameRef.current
@@ -140,12 +157,10 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
       .catch((e) => setError(String(e)))
   }, [props.psdFile])
 
-  // Resolve layers + build base canvas when PSD or config changes
+  // Resolve layers + build render sequence when PSD or config changes
   useEffect(() => {
     if (!psd) return
-    const resolved = resolveLayers(psd, props.mouth, props.eye, props.layerVisibility)
-    resolvedRef.current = resolved
-    baseCanvasRef.current = buildBaseCanvas(psd.width, psd.height, resolved.base)
+    resolvedRef.current = buildRenderSequence(psd, props.mouth, props.eye, props.layerVisibility)
 
     const canvas = canvasRef.current
     if (canvas) {

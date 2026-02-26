@@ -27,6 +27,8 @@ const props = {
   sensitivity: Number(params.get('sensitivity')) || 3,
   blinkInterval: Number(params.get('blinkInterval')) || 3,
   blinkSpeed: Number(params.get('blinkSpeed')) || 6,
+  layerVisibility: JSON.parse(params.get('layerVisibility') || '{}') as Record<string, boolean>,
+  preview: params.get('preview') === 'true',
 }
 
 createRoot(document.getElementById('root')!).render(<PsdAvatar {...props} />)

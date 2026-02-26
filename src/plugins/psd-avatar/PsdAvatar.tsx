@@ -15,6 +15,8 @@ export interface PsdAvatarProps {
   sensitivity: number
   blinkInterval: number
   blinkSpeed: number
+  layerVisibility: Record<string, boolean>
+  preview?: boolean
 }
 
 interface ResolvedLayers {
@@ -23,12 +25,20 @@ interface ResolvedLayers {
   eye: (PsdLayer | null)[]
 }
 
-function resolveLayers(psd: PsdData, mouthPaths: string[], eyePaths: string[]): ResolvedLayers {
+function resolveLayers(
+  psd: PsdData,
+  mouthPaths: string[],
+  eyePaths: string[],
+  layerVisibility: Record<string, boolean>,
+): ResolvedLayers {
   const leafLayers = getLeafLayers(psd)
   const mouthSet = new Set(mouthPaths.filter(Boolean))
   const eyeSet = new Set(eyePaths.filter(Boolean))
 
-  const base = leafLayers.filter((l) => !l.hidden && !mouthSet.has(l.path) && !eyeSet.has(l.path))
+  const base = leafLayers.filter((l) => {
+    const visible = l.path in layerVisibility ? layerVisibility[l.path] : !l.hidden
+    return visible && !mouthSet.has(l.path) && !eyeSet.has(l.path)
+  })
   const mouth = mouthPaths.map((p) => (p ? leafLayers.find((l) => l.path === p) ?? null : null))
   const eye = eyePaths.map((p) => (p ? leafLayers.find((l) => l.path === p) ?? null : null))
 
@@ -63,11 +73,12 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
   // Resolve layers when PSD or config changes
   useEffect(() => {
     if (!psd) return
-    resolvedRef.current = resolveLayers(psd, props.mouth, props.eye)
-  }, [psd, props.mouth, props.eye])
+    resolvedRef.current = resolveLayers(psd, props.mouth, props.eye, props.layerVisibility)
+  }, [psd, props.mouth, props.eye, props.layerVisibility])
 
-  // TTS queue
+  // TTS queue (disabled in preview mode)
   useEffect(() => {
+    if (props.preview) return
     const queue = new TtsQueue({
       host: props.voicevoxHost,
       speaker: props.speaker,
@@ -81,10 +92,11 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
     })
     ttsQueueRef.current = queue
     return () => queue.destroy()
-  }, [props.voicevoxHost, props.speaker, props.speed, props.volume, props.threshold, props.sensitivity])
+  }, [props.voicevoxHost, props.speaker, props.speed, props.volume, props.threshold, props.sensitivity, props.preview])
 
-  // Eye blink timer
+  // Eye blink timer (disabled in preview mode)
   useEffect(() => {
+    if (props.preview) return
     const { blinkInterval, blinkSpeed } = props
     if (props.eye.every((p) => !p)) return
 

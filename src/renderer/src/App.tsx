@@ -355,8 +355,7 @@ function App(): JSX.Element {
                               if (plugin.settingsPopup) {
                                 window.open(
                                   `${BASE_URL}/plugins/${plugin.id}/settings/?pluginId=${plugin.id}`,
-                                  `nicomview-settings-${plugin.id}`,
-                                  'width=480,height=720'
+                                  `nicomview-settings-${plugin.id}`
                                 )
                               } else {
                                 toggleExpanded(plugin.id)

@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import type { PluginSettings, PluginSettingsMessage } from '../../../shared/types'
-import { loadPsd, type PsdData } from '../psdLoader'
+import { loadPsd, type PsdData, type PsdLayer } from '../psdLoader'
 import { fetchSpeakers, type VoicevoxSpeaker } from '../voicevoxClient'
 
-const DEFAULTS = {
+const DEFAULTS: Record<string, string | number> = {
   psdFile: 'models/default.psd',
   voicevoxHost: 'http://localhost:50021',
   speaker: 0,
@@ -15,13 +15,54 @@ const DEFAULTS = {
   blinkSpeed: 6,
   mouth0: '', mouth1: '', mouth2: '', mouth3: '', mouth4: '',
   eye0: '', eye1: '', eye2: '', eye3: '', eye4: '',
+  layerVisibility: '{}',
 }
 
-const MOUTH_LABELS = ['閉じ', 'ほぼ閉じ', '半開き', 'ほぼ開き', '開き']
-const EYE_LABELS = ['開き', 'ほぼ開き', '半開き', 'ほぼ閉じ', '閉じ']
+const ROLE_OPTIONS = [
+  { value: '', label: 'なし' },
+  { value: 'mouth0', label: '口: 閉じ' },
+  { value: 'mouth1', label: '口: ほぼ閉じ' },
+  { value: 'mouth2', label: '口: 半開き' },
+  { value: 'mouth3', label: '口: ほぼ開き' },
+  { value: 'mouth4', label: '口: 開き' },
+  { value: 'eye0', label: '目: 開き' },
+  { value: 'eye1', label: '目: ほぼ開き' },
+  { value: 'eye2', label: '目: 半開き' },
+  { value: 'eye3', label: '目: ほぼ閉じ' },
+  { value: 'eye4', label: '目: 閉じ' },
+]
+
+const OVERLAY_BASE = 'http://localhost:3939/plugins/psd-avatar/overlay/'
 
 interface Props {
   pluginId: string
+}
+
+function parseVisibility(settings: Record<string, string | number>): Record<string, boolean> {
+  try {
+    const raw = settings.layerVisibility
+    if (typeof raw === 'string' && raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return {}
+}
+
+function buildRoleMap(settings: Record<string, string | number>): Record<string, string> {
+  const map: Record<string, string> = {}
+  for (const key of ['mouth0','mouth1','mouth2','mouth3','mouth4','eye0','eye1','eye2','eye3','eye4']) {
+    const path = String(settings[key] ?? '')
+    if (path) map[path] = key
+  }
+  return map
+}
+
+function buildPreviewUrl(settings: Record<string, string | number>, animate: boolean): string {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(settings)) {
+    if (value !== '' && value != null) params.set(key, String(value))
+  }
+  if (!animate) params.set('preview', 'true')
+  const qs = params.toString()
+  return qs ? `${OVERLAY_BASE}?${qs}` : OVERLAY_BASE
 }
 
 export function Settings({ pluginId }: Props) {
@@ -32,6 +73,7 @@ export function Settings({ pluginId }: Props) {
   const [psdLoading, setPsdLoading] = useState(false)
   const [speakers, setSpeakers] = useState<VoicevoxSpeaker[]>([])
   const [speakersError, setSpeakersError] = useState<string | null>(null)
+  const [previewAnimate, setPreviewAnimate] = useState(false)
 
   useEffect(() => {
     const handler = (e: MessageEvent) => {
@@ -78,6 +120,17 @@ export function Settings({ pluginId }: Props) {
     [sendUpdate]
   )
 
+  const updateMultiple = useCallback(
+    (updates: Record<string, string | number>) => {
+      setSettings((prev) => {
+        const next = { ...prev, ...updates }
+        sendUpdate(next)
+        return next
+      })
+    },
+    [sendUpdate]
+  )
+
   const handleLoadPsd = useCallback(async () => {
     setPsdLoading(true)
     setPsdError(null)
@@ -103,15 +156,52 @@ export function Settings({ pluginId }: Props) {
     }
   }, [settings.voicevoxHost])
 
-  // Fetch speakers on mount when ready
   useEffect(() => {
     if (ready) handleFetchSpeakers()
   }, [ready]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const visibility = useMemo(() => parseVisibility(settings), [settings.layerVisibility])
+  const roleMap = useMemo(() => buildRoleMap(settings), [
+    settings.mouth0, settings.mouth1, settings.mouth2, settings.mouth3, settings.mouth4,
+    settings.eye0, settings.eye1, settings.eye2, settings.eye3, settings.eye4,
+  ])
+  const previewUrl = useMemo(() => buildPreviewUrl(settings, previewAnimate), [settings, previewAnimate])
+
+  const handleVisibilityToggle = useCallback(
+    (layer: PsdLayer) => {
+      const current = layer.path in visibility ? visibility[layer.path] : !layer.hidden
+      const next = { ...visibility, [layer.path]: !current }
+      update('layerVisibility', JSON.stringify(next))
+    },
+    [visibility, update]
+  )
+
+  const handleRoleChange = useCallback(
+    (layerPath: string, newRole: string) => {
+      const oldRole = roleMap[layerPath] ?? ''
+      const updates: Record<string, string | number> = {}
+
+      // Clear old role for this layer
+      if (oldRole) updates[oldRole] = ''
+
+      // Clear the layer that previously had the new role
+      if (newRole) {
+        const prevPath = String(settings[newRole] ?? '')
+        if (prevPath && prevPath !== layerPath) {
+          // Another layer had this role — it gets cleared automatically
+        }
+        updates[newRole] = layerPath
+      }
+
+      updateMultiple(updates)
+    },
+    [roleMap, settings, updateMultiple]
+  )
+
   if (!ready) return null
 
-  const leafPaths = psd
-    ? psd.layers.filter((l) => !l.isGroup && l.canvas !== null).map((l) => l.path)
+  const leafLayers = psd
+    ? psd.layers.filter((l) => !l.isGroup && l.canvas !== null)
     : []
 
   const speakerOptions: { id: number; label: string }[] = []
@@ -144,57 +234,69 @@ export function Settings({ pluginId }: Props) {
           </button>
         </div>
         {psdError && <div className="error-text">{psdError}</div>}
-        {psd && <div className="success-text">{psd.width}x{psd.height} — {leafPaths.length} レイヤー</div>}
-        {psd && (
-          <div className="layer-tree">
-            {psd.layers.map((l) => (
-              <div key={l.path} className={`layer-item${l.isGroup ? ' group' : ''}`}>
-                {'　'.repeat(l.path.split('/').length - 1)}
-                {l.isGroup ? '📁 ' : '🖼 '}
-                {l.path}
-              </div>
-            ))}
+        {psd && <div className="success-text">{psd.width}x{psd.height} — {leafLayers.length} レイヤー</div>}
+      </div>
+
+      {/* レイヤーツリー + プレビュー */}
+      {psd && (
+        <div className="main-panes">
+          <div className="pane-left">
+            <div className="settings-section-title">レイヤー</div>
+            <div className="layer-tree">
+              {psd.layers.map((l) => {
+                const depth = l.path.split('/').length - 1
+                if (l.isGroup) {
+                  return (
+                    <div key={l.path} className="layer-item group" style={{ paddingLeft: depth * 16 }}>
+                      {l.name}
+                    </div>
+                  )
+                }
+                if (!l.canvas) return null
+                const isVisible = l.path in visibility ? visibility[l.path] : !l.hidden
+                const role = roleMap[l.path] ?? ''
+                return (
+                  <div key={l.path} className="layer-item leaf" style={{ paddingLeft: depth * 16 }}>
+                    <input
+                      type="checkbox"
+                      checked={isVisible}
+                      onChange={() => handleVisibilityToggle(l)}
+                    />
+                    <span className="layer-name">{l.name}</span>
+                    <select
+                      className="role-select"
+                      value={role}
+                      onChange={(e) => handleRoleChange(l.path, e.target.value)}
+                    >
+                      {ROLE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        )}
-      </div>
-
-      {/* 口パクレイヤー */}
-      <div className="settings-section">
-        <div className="settings-section-title">口パクレイヤー（5段階）</div>
-        {MOUTH_LABELS.map((label, i) => (
-          <label key={i} className="settings-label">
-            {label}
-            <select
-              value={settings[`mouth${i}`]}
-              onChange={(e) => update(`mouth${i}`, e.target.value)}
-            >
-              <option value="">（未設定）</option>
-              {leafPaths.map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </label>
-        ))}
-      </div>
-
-      {/* 目パチレイヤー */}
-      <div className="settings-section">
-        <div className="settings-section-title">目パチレイヤー（5段階）</div>
-        {EYE_LABELS.map((label, i) => (
-          <label key={i} className="settings-label">
-            {label}
-            <select
-              value={settings[`eye${i}`]}
-              onChange={(e) => update(`eye${i}`, e.target.value)}
-            >
-              <option value="">（未設定）</option>
-              {leafPaths.map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </label>
-        ))}
-      </div>
+          <div className="pane-right">
+            <div className="preview-header">
+              <div className="settings-section-title">プレビュー</div>
+              <label className="animate-toggle">
+                <input
+                  type="checkbox"
+                  checked={previewAnimate}
+                  onChange={(e) => setPreviewAnimate(e.target.checked)}
+                />
+                アニメーション
+              </label>
+            </div>
+            <iframe
+              className="preview-iframe"
+              src={previewUrl}
+              title="プレビュー"
+            />
+          </div>
+        </div>
+      )}
 
       {/* VOICEVOX 設定 */}
       <div className="settings-section">

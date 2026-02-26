@@ -25,7 +25,7 @@
 |---|---|---|
 | コメントリスト | `http://localhost:3939/plugins/comment-list/overlay/` | リスト形式（自動スクロール・200件上限） |
 | 通知カード | `http://localhost:3939/plugins/comment-cards/overlay/` | カード表示（コメント・ギフト・通知・エモーション・運営コメント対応、右からスライドイン・自動退場） |
-| PSD アバター | `http://localhost:3939/plugins/psd-avatar/overlay/` | PSD ファイルを使った 2D アバター（目パチ・口パク・VOICEVOX リップシンク・OBSTool 命名規則対応） |
+| PSD アバター | `http://localhost:3939/plugins/psd-avatar/overlay/` | PSD ファイルを使った 2D アバター（目パチ・口パク・VOICEVOX リップシンク・PSDTool 命名規則対応） |
 
 プラグイン一覧は `http://localhost:3939/` でも確認できる。
 
@@ -39,7 +39,7 @@
 
 `http://localhost:3939/plugins/psd-avatar/settings/` で設定する。PSD ファイルを指定し、読み込んだレイヤーツリーで各レイヤーに役割（目フレーム 0〜4、口レベル 0〜4）を割り当てる。1 つのフレームに複数のレイヤーを同時割当可能。
 
-**OBSTool 互換の命名規則**
+**PSDTool 互換の命名規則**
 
 PSD のレイヤー名・グループ名に以下のプレフィックス／サフィックスを付けると特殊な挙動になる:
 

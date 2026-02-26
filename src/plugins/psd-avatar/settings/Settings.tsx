@@ -18,19 +18,22 @@ const DEFAULTS: Record<string, string | number> = {
   layerVisibility: '{}',
 }
 
-const ROLE_OPTIONS = [
-  { value: '', label: 'なし' },
-  { value: 'mouth0', label: '口: 閉じ' },
-  { value: 'mouth1', label: '口: ほぼ閉じ' },
-  { value: 'mouth2', label: '口: 半開き' },
-  { value: 'mouth3', label: '口: ほぼ開き' },
-  { value: 'mouth4', label: '口: 開き' },
-  { value: 'eye0', label: '目: 開き' },
-  { value: 'eye1', label: '目: ほぼ開き' },
-  { value: 'eye2', label: '目: 半開き' },
-  { value: 'eye3', label: '目: ほぼ閉じ' },
-  { value: 'eye4', label: '目: 閉じ' },
-]
+const MOUTH_KEYS = ['mouth0', 'mouth1', 'mouth2', 'mouth3', 'mouth4'] as const
+const EYE_KEYS = ['eye0', 'eye1', 'eye2', 'eye3', 'eye4'] as const
+const ALL_ROLE_KEYS = [...MOUTH_KEYS, ...EYE_KEYS]
+
+const ROLE_LABELS: Record<string, string> = {
+  mouth0: '口: 閉じ',
+  mouth1: '口: ほぼ閉じ',
+  mouth2: '口: 半開き',
+  mouth3: '口: ほぼ開き',
+  mouth4: '口: 開き',
+  eye0: '目: 開き',
+  eye1: '目: ほぼ開き',
+  eye2: '目: 半開き',
+  eye3: '目: ほぼ閉じ',
+  eye4: '目: 閉じ',
+}
 
 const OVERLAY_BASE = 'http://localhost:3939/plugins/psd-avatar/overlay/'
 
@@ -46,11 +49,14 @@ function parseVisibility(settings: Record<string, string | number>): Record<stri
   return {}
 }
 
-function buildRoleMap(settings: Record<string, string | number>): Record<string, string> {
-  const map: Record<string, string> = {}
-  for (const key of ['mouth0','mouth1','mouth2','mouth3','mouth4','eye0','eye1','eye2','eye3','eye4']) {
+function buildRoleMap(settings: Record<string, string | number>): Record<string, string[]> {
+  const map: Record<string, string[]> = {}
+  for (const key of ALL_ROLE_KEYS) {
     const path = String(settings[key] ?? '')
-    if (path) map[path] = key
+    if (path) {
+      if (!map[path]) map[path] = []
+      map[path].push(key)
+    }
   }
   return map
 }
@@ -186,26 +192,16 @@ export function Settings({ pluginId }: Props) {
     [visibility, update]
   )
 
-  const handleRoleChange = useCallback(
-    (layerPath: string, newRole: string) => {
-      const oldRole = roleMap[layerPath] ?? ''
-      const updates: Record<string, string | number> = {}
-
-      // Clear old role for this layer
-      if (oldRole) updates[oldRole] = ''
-
-      // Clear the layer that previously had the new role
-      if (newRole) {
-        const prevPath = String(settings[newRole] ?? '')
-        if (prevPath && prevPath !== layerPath) {
-          // Another layer had this role — it gets cleared automatically
-        }
-        updates[newRole] = layerPath
+  const handleRoleToggle = useCallback(
+    (layerPath: string, roleKey: string) => {
+      const current = String(settings[roleKey] ?? '')
+      if (current === layerPath) {
+        update(roleKey, '')
+      } else {
+        update(roleKey, layerPath)
       }
-
-      updateMultiple(updates)
     },
-    [roleMap, settings, updateMultiple]
+    [settings, update]
   )
 
   if (!ready) return null
@@ -264,7 +260,7 @@ export function Settings({ pluginId }: Props) {
                 }
                 if (!l.canvas) return null
                 const isVisible = l.path in visibility ? visibility[l.path] : !l.hidden
-                const role = roleMap[l.path] ?? ''
+                const roles = roleMap[l.path] ?? []
                 return (
                   <div key={l.path} className="layer-item leaf" style={{ paddingLeft: depth * 16 }}>
                     <input
@@ -273,15 +269,33 @@ export function Settings({ pluginId }: Props) {
                       onChange={() => handleVisibilityToggle(l)}
                     />
                     <span className="layer-name">{l.name}</span>
-                    <select
-                      className="role-select"
-                      value={role}
-                      onChange={(e) => handleRoleChange(l.path, e.target.value)}
-                    >
-                      {ROLE_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <div className="chip-select">
+                      {roles.map((roleKey) => (
+                        <span key={roleKey} className="chip">
+                          {ROLE_LABELS[roleKey]}
+                          <button
+                            className="chip-remove"
+                            onClick={() => handleRoleToggle(l.path, roleKey)}
+                          >
+                            ×
+                          </button>
+                        </span>
                       ))}
-                    </select>
+                      {roles.length < ALL_ROLE_KEYS.length && (
+                        <select
+                          className="chip-add-select"
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) handleRoleToggle(l.path, e.target.value)
+                          }}
+                        >
+                          <option value="">+</option>
+                          {ALL_ROLE_KEYS.filter((k) => !roles.includes(k)).map((key) => (
+                            <option key={key} value={key}>{ROLE_LABELS[key]}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                   </div>
                 )
               })}

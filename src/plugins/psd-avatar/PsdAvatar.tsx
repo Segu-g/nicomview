@@ -25,6 +25,23 @@ interface ResolvedLayers {
   eye: (PsdLayer | null)[]
 }
 
+/** Fill null entries with the nearest non-null neighbor */
+function fillNearestNeighbor<T>(arr: (T | null)[]): (T | null)[] {
+  const result = [...arr]
+  for (let i = 0; i < result.length; i++) {
+    if (result[i] !== null) continue
+    let left = i - 1
+    let right = i + 1
+    while (left >= 0 || right < result.length) {
+      if (left >= 0 && arr[left] !== null) { result[i] = arr[left]; break }
+      if (right < result.length && arr[right] !== null) { result[i] = arr[right]; break }
+      left--
+      right++
+    }
+  }
+  return result
+}
+
 function resolveLayers(
   psd: PsdData,
   mouthPaths: string[],
@@ -39,10 +56,14 @@ function resolveLayers(
     const visible = l.path in layerVisibility ? layerVisibility[l.path] : !l.hidden
     return visible && !mouthSet.has(l.path) && !eyeSet.has(l.path)
   })
-  const mouth = mouthPaths.map((p) => (p ? leafLayers.find((l) => l.path === p) ?? null : null))
-  const eye = eyePaths.map((p) => (p ? leafLayers.find((l) => l.path === p) ?? null : null))
+  const rawMouth = mouthPaths.map((p) => (p ? leafLayers.find((l) => l.path === p) ?? null : null))
+  const rawEye = eyePaths.map((p) => (p ? leafLayers.find((l) => l.path === p) ?? null : null))
 
-  return { base, mouth, eye }
+  return {
+    base,
+    mouth: fillNearestNeighbor(rawMouth),
+    eye: fillNearestNeighbor(rawEye),
+  }
 }
 
 function drawLayer(ctx: CanvasRenderingContext2D, layer: PsdLayer): void {

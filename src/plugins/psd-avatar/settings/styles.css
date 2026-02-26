@@ -117,9 +117,24 @@ body {
 }
 
 .layer-item.group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   color: #90caf9;
   font-weight: bold;
   padding-top: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.layer-item.group:hover {
+  color: #bbdefb;
+}
+
+.group-toggle {
+  font-size: 9px;
+  opacity: 0.7;
+  flex-shrink: 0;
 }
 
 .layer-item.leaf {

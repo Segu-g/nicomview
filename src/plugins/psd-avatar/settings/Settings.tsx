@@ -42,6 +42,14 @@ interface Props {
   pluginId: string
 }
 
+function isAncestorCollapsed(path: string, collapsed: Set<string>): boolean {
+  const parts = path.split('/')
+  for (let i = 1; i < parts.length; i++) {
+    if (collapsed.has(parts.slice(0, i).join('/'))) return true
+  }
+  return false
+}
+
 function parseVisibility(settings: Record<string, string | number>): Record<string, boolean> {
   try {
     const raw = settings.layerVisibility
@@ -88,6 +96,7 @@ export function Settings({ pluginId }: Props) {
   const [psdLoading, setPsdLoading] = useState(false)
   const [speakers, setSpeakers] = useState<VoicevoxSpeaker[]>([])
   const [speakersError, setSpeakersError] = useState<string | null>(null)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [previewAnimate, setPreviewAnimate] = useState(false)
   const [testText, setTestText] = useState('こんにちは')
   const previewRef = useRef<HTMLIFrameElement>(null)
@@ -201,6 +210,15 @@ export function Settings({ pluginId }: Props) {
     [visibility, update]
   )
 
+  const handleGroupToggle = useCallback((path: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(path)) next.delete(path)
+      else next.add(path)
+      return next
+    })
+  }, [])
+
   const handleRoleToggle = useCallback(
     (layerPath: string, roleKey: string) => {
       const current = parseLayerPaths(settings[roleKey] ?? '')
@@ -257,10 +275,18 @@ export function Settings({ pluginId }: Props) {
             <div className="settings-section-title">レイヤー</div>
             <div className="layer-tree">
               {psd.layers.map((l) => {
+                if (isAncestorCollapsed(l.path, collapsedGroups)) return null
                 const depth = l.path.split('/').length - 1
                 if (l.isGroup) {
+                  const collapsed = collapsedGroups.has(l.path)
                   return (
-                    <div key={l.path} className="layer-item group" style={{ paddingLeft: depth * 16 }}>
+                    <div
+                      key={l.path}
+                      className="layer-item group"
+                      style={{ paddingLeft: depth * 16 }}
+                      onClick={() => handleGroupToggle(l.path)}
+                    >
+                      <span className="group-toggle">{collapsed ? '▶' : '▼'}</span>
                       {l.name}
                     </div>
                   )

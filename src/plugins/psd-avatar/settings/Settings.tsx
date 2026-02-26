@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import type { PluginSettings, PluginSettingsMessage } from '../../../shared/types'
 import { loadPsd, type PsdData, type PsdLayer } from '../psdLoader'
 import { fetchSpeakers, type VoicevoxSpeaker } from '../voicevoxClient'
@@ -74,6 +74,8 @@ export function Settings({ pluginId }: Props) {
   const [speakers, setSpeakers] = useState<VoicevoxSpeaker[]>([])
   const [speakersError, setSpeakersError] = useState<string | null>(null)
   const [previewAnimate, setPreviewAnimate] = useState(false)
+  const [testText, setTestText] = useState('こんにちは')
+  const previewRef = useRef<HTMLIFrameElement>(null)
 
   useEffect(() => {
     const handler = (e: MessageEvent) => {
@@ -159,6 +161,14 @@ export function Settings({ pluginId }: Props) {
   useEffect(() => {
     if (ready) handleFetchSpeakers()
   }, [ready]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleTestSpeak = useCallback(() => {
+    if (!testText.trim()) return
+    previewRef.current?.contentWindow?.postMessage(
+      { type: 'nicomview:test-speak', text: testText.trim() },
+      '*'
+    )
+  }, [testText])
 
   const visibility = useMemo(() => parseVisibility(settings), [settings.layerVisibility])
   const roleMap = useMemo(() => buildRoleMap(settings), [
@@ -290,10 +300,24 @@ export function Settings({ pluginId }: Props) {
               </label>
             </div>
             <iframe
+              ref={previewRef}
               className="preview-iframe"
               src={previewUrl}
               title="プレビュー"
             />
+            <div className="test-speak-row">
+              <input
+                type="text"
+                className="test-speak-input"
+                value={testText}
+                onChange={(e) => setTestText(e.target.value)}
+                placeholder="テスト発話テキスト"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleTestSpeak() }}
+              />
+              <button className="settings-btn" onClick={handleTestSpeak}>
+                話す
+              </button>
+            </div>
           </div>
         </div>
       )}

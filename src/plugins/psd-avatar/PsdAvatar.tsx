@@ -76,9 +76,8 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
     resolvedRef.current = resolveLayers(psd, props.mouth, props.eye, props.layerVisibility)
   }, [psd, props.mouth, props.eye, props.layerVisibility])
 
-  // TTS queue (disabled in preview mode)
+  // TTS queue
   useEffect(() => {
-    if (props.preview) return
     const queue = new TtsQueue({
       host: props.voicevoxHost,
       speaker: props.speaker,
@@ -92,7 +91,7 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
     })
     ttsQueueRef.current = queue
     return () => queue.destroy()
-  }, [props.voicevoxHost, props.speaker, props.speed, props.volume, props.threshold, props.sensitivity, props.preview])
+  }, [props.voicevoxHost, props.speaker, props.speed, props.volume, props.threshold, props.sensitivity])
 
   // Eye blink timer (disabled in preview mode)
   useEffect(() => {
@@ -179,12 +178,25 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
     return () => cancelAnimationFrame(animId)
   }, [psd])
 
-  // Comment handler
+  // Test speak via postMessage
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === 'nicomview:test-speak') {
+        const text = e.data.text as string
+        if (text) ttsQueueRef.current?.enqueue(text)
+      }
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [])
+
+  // Comment handler (no-op in preview mode)
   const onComment = useCallback((data: CommentData) => {
+    if (props.preview) return
     if (data.isHistory) return
     if (!data.content) return
     ttsQueueRef.current?.enqueue(data.content)
-  }, [])
+  }, [props.preview])
 
   useCommentEvents({ onComment })
 

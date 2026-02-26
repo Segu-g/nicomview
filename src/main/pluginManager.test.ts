@@ -19,50 +19,47 @@ function writePluginManifest(
 }
 
 describe('PluginManager', () => {
-  let builtInDir: string
-  let externalDir: string
+  let pluginsDir: string
   let userDataDir: string
 
   beforeEach(() => {
-    builtInDir = createTempDir()
-    externalDir = createTempDir()
+    pluginsDir = createTempDir()
     userDataDir = createTempDir()
   })
 
   afterEach(() => {
-    fs.rmSync(builtInDir, { recursive: true, force: true })
-    fs.rmSync(externalDir, { recursive: true, force: true })
+    fs.rmSync(pluginsDir, { recursive: true, force: true })
     fs.rmSync(userDataDir, { recursive: true, force: true })
   })
 
   describe('discover', () => {
     it('ビルトインプラグインを検出する', () => {
-      writePluginManifest(builtInDir, 'test-plugin', {
+      writePluginManifest(pluginsDir, 'test-plugin', {
         id: 'test-plugin',
         name: 'Test Plugin',
         version: '1.0.0',
         overlay: true
       })
 
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
       manager.discover()
 
       const plugins = manager.getPlugins()
       expect(plugins).toHaveLength(1)
       expect(plugins[0].id).toBe('test-plugin')
-      expect(plugins[0].builtIn).toBe(true)
+      expect(plugins[0].builtIn).toBe(false)
       expect(plugins[0].basePath).toBe('/plugins/test-plugin')
     })
 
     it('外部プラグインを検出する', () => {
-      writePluginManifest(externalDir, 'external-plugin', {
+      writePluginManifest(pluginsDir, 'external-plugin', {
         id: 'external-plugin',
         name: 'External Plugin',
         version: '0.1.0',
         overlay: true
       })
 
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
       manager.discover()
 
       const plugins = manager.getPlugins()
@@ -72,45 +69,45 @@ describe('PluginManager', () => {
     })
 
     it('ビルトインと外部プラグインの両方を検出する', () => {
-      writePluginManifest(builtInDir, 'builtin', {
+      writePluginManifest(pluginsDir, 'builtin', {
         id: 'builtin',
         name: 'Built-in',
         version: '1.0.0',
         overlay: true
       })
-      writePluginManifest(externalDir, 'external', {
+      writePluginManifest(pluginsDir, 'external', {
         id: 'external',
         name: 'External',
         version: '1.0.0',
         overlay: true
       })
 
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
       manager.discover()
 
       expect(manager.getPlugins()).toHaveLength(2)
     })
 
     it('存在しないディレクトリでもエラーにならない', () => {
-      const manager = new PluginManager('/nonexistent/path', '/also/nonexistent', userDataDir)
+      const manager = new PluginManager('/nonexistent/path', userDataDir)
       expect(() => manager.discover()).not.toThrow()
       expect(manager.getPlugins()).toHaveLength(0)
     })
 
     it('不正なマニフェストをスキップする', () => {
-      writePluginManifest(builtInDir, 'bad-plugin', {
+      writePluginManifest(pluginsDir, 'bad-plugin', {
         id: 'bad-plugin',
         name: 'Bad'
         // missing version, overlay
       })
-      writePluginManifest(builtInDir, 'good-plugin', {
+      writePluginManifest(pluginsDir, 'good-plugin', {
         id: 'good-plugin',
         name: 'Good',
         version: '1.0.0',
         overlay: true
       })
 
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
       manager.discover()
 
       const plugins = manager.getPlugins()
@@ -119,9 +116,9 @@ describe('PluginManager', () => {
     })
 
     it('plugin.json がないディレクトリをスキップする', () => {
-      fs.mkdirSync(path.join(builtInDir, 'no-manifest'), { recursive: true })
+      fs.mkdirSync(path.join(pluginsDir, 'no-manifest'), { recursive: true })
 
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
       manager.discover()
 
       expect(manager.getPlugins()).toHaveLength(0)
@@ -130,14 +127,14 @@ describe('PluginManager', () => {
 
   describe('getPlugin', () => {
     it('IDで特定のプラグインを取得できる', () => {
-      writePluginManifest(builtInDir, 'my-plugin', {
+      writePluginManifest(pluginsDir, 'my-plugin', {
         id: 'my-plugin',
         name: 'My Plugin',
         version: '1.0.0',
         overlay: true
       })
 
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
       manager.discover()
 
       const plugin = manager.getPlugin('my-plugin')
@@ -146,7 +143,7 @@ describe('PluginManager', () => {
     })
 
     it('存在しないIDではundefinedを返す', () => {
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
       manager.discover()
 
       expect(manager.getPlugin('nonexistent')).toBeUndefined()
@@ -155,7 +152,7 @@ describe('PluginManager', () => {
 
   describe('preferences', () => {
     it('デフォルト設定を返す', () => {
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
 
       const prefs = manager.getPreferences()
       expect(prefs.enabledEvents).toEqual([
@@ -168,18 +165,18 @@ describe('PluginManager', () => {
     })
 
     it('設定を保存・読み込みできる', () => {
-      const manager1 = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager1 = new PluginManager(pluginsDir, userDataDir)
       manager1.setPreferences({
         enabledEvents: ['comment', 'gift']
       })
 
-      const manager2 = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager2 = new PluginManager(pluginsDir, userDataDir)
       const prefs = manager2.getPreferences()
       expect(prefs.enabledEvents).toEqual(['comment', 'gift'])
     })
 
     it('不正なイベントタイプをフィルタする', () => {
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
       manager.setPreferences({
         enabledEvents: ['comment', 'invalid' as any, 'gift']
       })
@@ -191,20 +188,20 @@ describe('PluginManager', () => {
 
   describe('pluginSettings', () => {
     it('デフォルトで空のオブジェクトを返す', () => {
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
       expect(manager.getPluginSettings('any-plugin')).toEqual({})
     })
 
     it('設定を保存・読み込みできる', () => {
-      const manager1 = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager1 = new PluginManager(pluginsDir, userDataDir)
       manager1.setPluginSettings('comment-list', { fontSize: 32, theme: 'light' })
 
-      const manager2 = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager2 = new PluginManager(pluginsDir, userDataDir)
       expect(manager2.getPluginSettings('comment-list')).toEqual({ fontSize: 32, theme: 'light' })
     })
 
     it('プラグインごとに独立した設定を保持する', () => {
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
       manager.setPluginSettings('comment-list', { fontSize: 20 })
       manager.setPluginSettings('comment-cards', { fontSize: 40, duration: 30 })
 
@@ -213,7 +210,7 @@ describe('PluginManager', () => {
     })
 
     it('設定の更新が既存の他プラグイン設定に影響しない', () => {
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
       manager.setPluginSettings('comment-list', { fontSize: 20 })
       manager.setPluginSettings('comment-cards', { duration: 30 })
 
@@ -224,7 +221,7 @@ describe('PluginManager', () => {
     })
 
     it('返り値を変更しても内部状態に影響しない', () => {
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
       manager.setPluginSettings('test', { fontSize: 20 })
 
       const settings = manager.getPluginSettings('test')
@@ -236,23 +233,23 @@ describe('PluginManager', () => {
 
   describe('getPluginFsPath', () => {
     it('ビルトインプラグインのファイルシステムパスを返す', () => {
-      writePluginManifest(builtInDir, 'test-plugin', {
+      writePluginManifest(pluginsDir, 'test-plugin', {
         id: 'test-plugin',
         name: 'Test',
         version: '1.0.0',
         overlay: true
       })
 
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
       manager.discover()
 
       expect(manager.getPluginFsPath('test-plugin')).toBe(
-        path.join(builtInDir, 'test-plugin')
+        path.join(pluginsDir, 'test-plugin')
       )
     })
 
     it('存在しないプラグインにはundefinedを返す', () => {
-      const manager = new PluginManager(builtInDir, externalDir, userDataDir)
+      const manager = new PluginManager(pluginsDir, userDataDir)
       manager.discover()
 
       expect(manager.getPluginFsPath('nonexistent')).toBeUndefined()

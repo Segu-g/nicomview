@@ -37,6 +37,8 @@ const props = {
   blinkInterval: Number(params.get('blinkInterval')) || 3,
   blinkSpeed: Number(params.get('blinkSpeed')) || 6,
   layerVisibility: JSON.parse(params.get('layerVisibility') || '{}') as Record<string, boolean>,
+  flipX: params.get('flipX') === '1',
+  flipY: params.get('flipY') === '1',
   preview: params.get('preview') === 'true',
 }
 

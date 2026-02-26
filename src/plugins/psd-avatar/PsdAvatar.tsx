@@ -17,6 +17,8 @@ export interface PsdAvatarProps {
   blinkInterval: number
   blinkSpeed: number
   layerVisibility: Record<string, boolean>
+  flipX?: boolean
+  flipY?: boolean
   preview?: boolean
 }
 
@@ -28,6 +30,23 @@ interface ResolvedLayers {
   sequence: RenderItem[]
   eye: (PsdLayer[] | null)[]
   mouth: (PsdLayer[] | null)[]
+}
+
+/** Returns true if any ancestor group is explicitly hidden in layerVisibility */
+function isHiddenByAncestor(layerPath: string, layerVisibility: Record<string, boolean>): boolean {
+  const parts = layerPath.split('/')
+  for (let i = 1; i < parts.length; i++) {
+    if (layerVisibility[parts.slice(0, i).join('/')] === false) return true
+  }
+  return false
+}
+
+/** Returns the base path of a flip layer (strips :flipx / :flipy / :flipxy suffix) */
+function getBaseFlipPath(layer: PsdLayer): string {
+  const parts = layer.path.split('/')
+  const last = parts[parts.length - 1]
+  const stripped = (layer.flipX && layer.flipY) ? last.slice(0, -7) : last.slice(0, -6)
+  return [...parts.slice(0, -1), stripped].join('/')
 }
 
 /** Fill null entries with the nearest non-null neighbor */
@@ -52,13 +71,24 @@ function buildRenderSequence(
   mouthPaths: string[][],
   eyePaths: string[][],
   layerVisibility: Record<string, boolean>,
+  flipX: boolean,
+  flipY: boolean,
 ): ResolvedLayers {
   const leafLayers = getLeafLayers(psd)
   const mouthSet = new Set(mouthPaths.flat().filter(Boolean))
   const eyeSet = new Set(eyePaths.flat().filter(Boolean))
 
+  // Paths whose base layer should be suppressed because a flip variant is active
+  const suppressedByFlip = new Set<string>()
+  for (const layer of leafLayers) {
+    if (!layer.flipX && !layer.flipY) continue
+    const flipActive = (!layer.flipX || flipX) && (!layer.flipY || flipY)
+    if (flipActive) suppressedByFlip.add(getBaseFlipPath(layer))
+  }
+
   const sequence: RenderItem[] = []
   let segmentLayers: PsdLayer[] = []
+  const radioShownGroups = new Set<string>()
 
   const flushSegment = (): void => {
     if (segmentLayers.length === 0) return
@@ -75,13 +105,46 @@ function buildRenderSequence(
     if (eyeSet.has(layer.path)) {
       flushSegment()
       sequence.push({ kind: 'dynamic', role: 'eye', layer })
-    } else if (mouthSet.has(layer.path)) {
+      continue
+    }
+    if (mouthSet.has(layer.path)) {
       flushSegment()
       sequence.push({ kind: 'dynamic', role: 'mouth', layer })
-    } else {
-      const visible = layer.path in layerVisibility ? layerVisibility[layer.path] : !layer.hidden
-      if (visible) segmentLayers.push(layer)
+      continue
     }
+
+    // forceVisible (!) always renders regardless of other rules
+    if (layer.forceVisible) {
+      segmentLayers.push(layer)
+      continue
+    }
+
+    // Ancestor group hidden via layerVisibility
+    if (isHiddenByAncestor(layer.path, layerVisibility)) continue
+
+    // Base layer suppressed because a flip variant is active
+    if (suppressedByFlip.has(layer.path)) continue
+
+    // Flip layer: visible only when the flip condition matches
+    if (layer.flipX || layer.flipY) {
+      const flipActive = (!layer.flipX || flipX) && (!layer.flipY || flipY)
+      const visible = layer.path in layerVisibility ? layerVisibility[layer.path] : flipActive
+      if (visible) segmentLayers.push(layer)
+      continue
+    }
+
+    // Normal visibility
+    const visible = layer.path in layerVisibility ? layerVisibility[layer.path] : !layer.hidden
+    if (!visible) continue
+
+    // Radio (*): at most one per parent group
+    if (layer.isRadio) {
+      const parentGroup = layer.path.split('/').slice(0, -1).join('/')
+      if (radioShownGroups.has(parentGroup)) continue
+      radioShownGroups.add(parentGroup)
+    }
+
+    segmentLayers.push(layer)
   }
   flushSegment()
 
@@ -164,7 +227,10 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
   // Resolve layers + build render sequence when PSD or config changes
   useEffect(() => {
     if (!psd) return
-    resolvedRef.current = buildRenderSequence(psd, props.mouth, props.eye, props.layerVisibility)
+    resolvedRef.current = buildRenderSequence(
+      psd, props.mouth, props.eye, props.layerVisibility,
+      props.flipX ?? false, props.flipY ?? false,
+    )
 
     const canvas = canvasRef.current
     if (canvas) {
@@ -172,7 +238,7 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
       canvas.height = psd.height
     }
     requestRender()
-  }, [psd, props.mouth, props.eye, props.layerVisibility, requestRender])
+  }, [psd, props.mouth, props.eye, props.layerVisibility, props.flipX, props.flipY, requestRender])
 
   // TTS queue
   useEffect(() => {

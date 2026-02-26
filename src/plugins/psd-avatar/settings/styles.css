@@ -135,6 +135,24 @@ body {
   font-size: 9px;
   opacity: 0.7;
   flex-shrink: 0;
+  cursor: pointer;
+}
+
+.flip-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #4a148c;
+  color: #ce93d8;
+}
+
+.settings-label-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  color: #e0e0e0;
+  cursor: pointer;
 }
 
 .layer-item.leaf {

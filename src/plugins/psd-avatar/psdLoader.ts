@@ -10,6 +10,8 @@ export interface PsdLayer {
   isGroup: boolean
   forceVisible: boolean
   isRadio: boolean
+  flipX: boolean
+  flipY: boolean
   hidden: boolean
 }
 
@@ -19,10 +21,19 @@ export interface PsdData {
   layers: PsdLayer[]
 }
 
-function parseName(raw: string): { name: string; forceVisible: boolean; isRadio: boolean } {
+function parseName(raw: string): {
+  name: string
+  pathName: string
+  forceVisible: boolean
+  isRadio: boolean
+  flipX: boolean
+  flipY: boolean
+} {
   let name = raw
   let forceVisible = false
   let isRadio = false
+  let flipX = false
+  let flipY = false
 
   if (name.startsWith('!')) {
     forceVisible = true
@@ -32,7 +43,21 @@ function parseName(raw: string): { name: string; forceVisible: boolean; isRadio:
     name = name.slice(1)
   }
 
-  return { name, forceVisible, isRadio }
+  // pathName keeps flip suffix (for unique path), name strips it (for display)
+  const pathName = name
+  if (name.endsWith(':flipxy')) {
+    flipX = true
+    flipY = true
+    name = name.slice(0, -7)
+  } else if (name.endsWith(':flipx')) {
+    flipX = true
+    name = name.slice(0, -6)
+  } else if (name.endsWith(':flipy')) {
+    flipY = true
+    name = name.slice(0, -6)
+  }
+
+  return { name, pathName, forceVisible, isRadio, flipX, flipY }
 }
 
 function flattenLayers(layers: Layer[], parentPath: string, parentHidden: boolean): PsdLayer[] {
@@ -40,8 +65,8 @@ function flattenLayers(layers: Layer[], parentPath: string, parentHidden: boolea
 
   for (const layer of layers) {
     const rawName = layer.name ?? ''
-    const { name, forceVisible, isRadio } = parseName(rawName)
-    const path = parentPath ? `${parentPath}/${name}` : name
+    const { name, pathName, forceVisible, isRadio, flipX, flipY } = parseName(rawName)
+    const path = parentPath ? `${parentPath}/${pathName}` : pathName
     const isGroup = !!(layer.children && layer.children.length > 0)
     const hidden = parentHidden || !!(layer.hidden)
 
@@ -55,6 +80,8 @@ function flattenLayers(layers: Layer[], parentPath: string, parentHidden: boolea
       isGroup,
       forceVisible,
       isRadio,
+      flipX,
+      flipY,
       hidden,
     })
 

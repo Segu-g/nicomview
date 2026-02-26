@@ -17,6 +17,8 @@ const DEFAULTS: Record<string, string | number> = {
   mouth0: '', mouth1: '', mouth2: '', mouth3: '', mouth4: '',
   eye0: '', eye1: '', eye2: '', eye3: '', eye4: '',
   layerVisibility: '{}',
+  flipX: 0,
+  flipY: 0,
 }
 
 const MOUTH_KEYS = ['mouth0', 'mouth1', 'mouth2', 'mouth3', 'mouth4'] as const
@@ -203,11 +205,46 @@ export function Settings({ pluginId }: Props) {
 
   const handleVisibilityToggle = useCallback(
     (layer: PsdLayer) => {
+      if (layer.forceVisible) return
       const current = layer.path in visibility ? visibility[layer.path] : !layer.hidden
-      const next = { ...visibility, [layer.path]: !current }
-      update('layerVisibility', JSON.stringify(next))
+      if (layer.isRadio && !current) {
+        // Turning on a radio leaf: turn off sibling radio leaves in same parent group
+        const parentPath = layer.path.split('/').slice(0, -1).join('/') || '__root__'
+        const next = { ...visibility, [layer.path]: true }
+        for (const other of (psd?.layers ?? [])) {
+          if (other.path === layer.path || other.isGroup || !other.isRadio) continue
+          const otherParent = other.path.split('/').slice(0, -1).join('/') || '__root__'
+          if (otherParent === parentPath) next[other.path] = false
+        }
+        update('layerVisibility', JSON.stringify(next))
+      } else {
+        update('layerVisibility', JSON.stringify({ ...visibility, [layer.path]: !current }))
+      }
     },
-    [visibility, update]
+    [visibility, update, psd]
+  )
+
+  const handleGroupVisibilityToggle = useCallback(
+    (layer: PsdLayer) => {
+      if (layer.forceVisible) return
+      const current = layer.path in visibility ? visibility[layer.path] : !layer.hidden
+      if (layer.isRadio) {
+        // Radio group: turning on deselects sibling radio groups
+        const parentPath = layer.path.split('/').slice(0, -1).join('/') || '__root__'
+        const next = { ...visibility, [layer.path]: !current }
+        if (!current) {
+          for (const other of (psd?.layers ?? [])) {
+            if (other.path === layer.path || !other.isGroup || !other.isRadio) continue
+            const otherParent = other.path.split('/').slice(0, -1).join('/') || '__root__'
+            if (otherParent === parentPath) next[other.path] = false
+          }
+        }
+        update('layerVisibility', JSON.stringify(next))
+      } else {
+        update('layerVisibility', JSON.stringify({ ...visibility, [layer.path]: !current }))
+      }
+    },
+    [visibility, update, psd]
   )
 
   const handleGroupToggle = useCallback((path: string) => {
@@ -277,17 +314,30 @@ export function Settings({ pluginId }: Props) {
               {psd.layers.map((l) => {
                 if (isAncestorCollapsed(l.path, collapsedGroups)) return null
                 const depth = l.path.split('/').length - 1
+                const parentPath = l.path.split('/').slice(0, -1).join('/') || '__root__'
+
                 if (l.isGroup) {
                   const collapsed = collapsedGroups.has(l.path)
+                  const isVisible = l.path in visibility ? visibility[l.path] : !l.hidden
                   return (
-                    <div
-                      key={l.path}
-                      className="layer-item group"
-                      style={{ paddingLeft: depth * 16 }}
-                      onClick={() => handleGroupToggle(l.path)}
-                    >
-                      <span className="group-toggle">{collapsed ? '▶' : '▼'}</span>
-                      {l.name}
+                    <div key={l.path} className="layer-item group" style={{ paddingLeft: depth * 16 }}>
+                      {l.forceVisible ? (
+                        <input type="checkbox" checked readOnly disabled />
+                      ) : l.isRadio ? (
+                        <input
+                          type="radio"
+                          name={parentPath}
+                          checked={isVisible}
+                          onChange={() => handleGroupVisibilityToggle(l)}
+                        />
+                      ) : null}
+                      <span className="group-toggle" onClick={() => handleGroupToggle(l.path)}>
+                        {collapsed ? '▶' : '▼'}
+                      </span>
+                      <span className="layer-name" onClick={() => handleGroupToggle(l.path)}>{l.name}</span>
+                      {(l.flipX || l.flipY) && (
+                        <span className="flip-badge">flip{l.flipX && l.flipY ? 'xy' : l.flipX ? 'x' : 'y'}</span>
+                      )}
                     </div>
                   )
                 }
@@ -296,12 +346,26 @@ export function Settings({ pluginId }: Props) {
                 const roles = roleMap[l.path] ?? []
                 return (
                   <div key={l.path} className="layer-item leaf" style={{ paddingLeft: depth * 16 }}>
-                    <input
-                      type="checkbox"
-                      checked={isVisible}
-                      onChange={() => handleVisibilityToggle(l)}
-                    />
+                    {l.forceVisible ? (
+                      <input type="checkbox" checked readOnly disabled />
+                    ) : l.isRadio ? (
+                      <input
+                        type="radio"
+                        name={parentPath}
+                        checked={isVisible}
+                        onChange={() => handleVisibilityToggle(l)}
+                      />
+                    ) : (
+                      <input
+                        type="checkbox"
+                        checked={isVisible}
+                        onChange={() => handleVisibilityToggle(l)}
+                      />
+                    )}
                     <span className="layer-name">{l.name}</span>
+                    {(l.flipX || l.flipY) && (
+                      <span className="flip-badge">flip{l.flipX && l.flipY ? 'xy' : l.flipX ? 'x' : 'y'}</span>
+                    )}
                     <div className="chip-select">
                       {roles.map((roleKey) => (
                         <span key={roleKey} className="chip">
@@ -459,6 +523,27 @@ export function Settings({ pluginId }: Props) {
             value={settings.mouthTransitionFrames}
             onChange={(e) => update('mouthTransitionFrames', Number(e.target.value))}
           />
+        </label>
+      </div>
+
+      {/* 反転設定 */}
+      <div className="settings-section">
+        <div className="settings-section-title">反転設定 (:flip レイヤー)</div>
+        <label className="settings-label settings-label-row">
+          <input
+            type="checkbox"
+            checked={Boolean(settings.flipX)}
+            onChange={(e) => update('flipX', e.target.checked ? 1 : 0)}
+          />
+          左右反転 (:flipx レイヤーを表示)
+        </label>
+        <label className="settings-label settings-label-row">
+          <input
+            type="checkbox"
+            checked={Boolean(settings.flipY)}
+            onChange={(e) => update('flipY', e.target.checked ? 1 : 0)}
+          />
+          上下反転 (:flipy レイヤーを表示)
         </label>
       </div>
 

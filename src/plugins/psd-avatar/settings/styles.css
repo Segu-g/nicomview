@@ -131,6 +131,10 @@ body {
   color: #bbdefb;
 }
 
+.layer-item.dimmed {
+  opacity: 0.4;
+}
+
 .group-toggle {
   font-size: 9px;
   opacity: 0.7;

@@ -44,6 +44,14 @@ interface Props {
   pluginId: string
 }
 
+function isAncestorHiddenByVis(path: string, visibility: Record<string, boolean>): boolean {
+  const parts = path.split('/')
+  for (let i = 1; i < parts.length; i++) {
+    if (visibility[parts.slice(0, i).join('/')] === false) return true
+  }
+  return false
+}
+
 function isAncestorCollapsed(path: string, collapsed: Set<string>): boolean {
   const parts = path.split('/')
   for (let i = 1; i < parts.length; i++) {
@@ -319,8 +327,9 @@ export function Settings({ pluginId }: Props) {
                 if (l.isGroup) {
                   const collapsed = collapsedGroups.has(l.path)
                   const isVisible = l.path in visibility ? visibility[l.path] : !l.hidden
+                  const ancestorHidden = isAncestorHiddenByVis(l.path, visibility)
                   return (
-                    <div key={l.path} className="layer-item group" style={{ paddingLeft: depth * 16 }}>
+                    <div key={l.path} className={`layer-item group${ancestorHidden ? ' dimmed' : ''}`} style={{ paddingLeft: depth * 16 }}>
                       {l.forceVisible ? (
                         <input type="checkbox" checked readOnly disabled />
                       ) : l.isRadio ? (
@@ -330,7 +339,13 @@ export function Settings({ pluginId }: Props) {
                           checked={isVisible}
                           onChange={() => handleGroupVisibilityToggle(l)}
                         />
-                      ) : null}
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={isVisible}
+                          onChange={() => handleGroupVisibilityToggle(l)}
+                        />
+                      )}
                       <span className="group-toggle" onClick={() => handleGroupToggle(l.path)}>
                         {collapsed ? '▶' : '▼'}
                       </span>
@@ -344,8 +359,9 @@ export function Settings({ pluginId }: Props) {
                 if (!l.canvas) return null
                 const isVisible = l.path in visibility ? visibility[l.path] : !l.hidden
                 const roles = roleMap[l.path] ?? []
+                const ancestorHidden = isAncestorHiddenByVis(l.path, visibility)
                 return (
-                  <div key={l.path} className="layer-item leaf" style={{ paddingLeft: depth * 16 }}>
+                  <div key={l.path} className={`layer-item leaf${ancestorHidden ? ' dimmed' : ''}`} style={{ paddingLeft: depth * 16 }}>
                     {l.forceVisible ? (
                       <input type="checkbox" checked readOnly disabled />
                     ) : l.isRadio ? (

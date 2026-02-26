@@ -47,6 +47,13 @@ export function HomePage() {
             </p>
           </div>
           <div className="card">
+            <div className="card-icon">&#129464;</div>
+            <h3>PSD アバター</h3>
+            <p>
+              PSD ファイルを使った 2D アバター表示。VOICEVOX 読み上げと連動した口パク・目パチに対応。
+            </p>
+          </div>
+          <div className="card">
             <div className="card-icon">&#9889;</div>
             <h3>リアルタイム WebSocket</h3>
             <p>

@@ -31,7 +31,8 @@ import {
   ContentCopy as CopyIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  FolderOpen as FolderOpenIcon
 } from '@mui/icons-material'
 import type {
   ConnectionState,
@@ -152,8 +153,8 @@ function App(): JSX.Element {
       if (msg.type === 'nicomview:ready') {
         const { pluginId } = msg
         const settings = pluginSettings[pluginId] ?? {}
-        const iframe = iframeRefs.current[pluginId]
-        iframe?.contentWindow?.postMessage(
+        const source = e.source as Window | null
+        source?.postMessage(
           { type: 'nicomview:settings-init', settings } satisfies PluginSettingsMessage,
           '*'
         )
@@ -332,9 +333,16 @@ function App(): JSX.Element {
 
         <Card variant="outlined" sx={{ mb: 3 }}>
           <CardContent>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              表示プラグイン
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                表示プラグイン
+              </Typography>
+              <Tooltip title="プラグインフォルダを開く">
+                <IconButton size="small" onClick={() => window.commentViewerAPI.openPluginFolder()}>
+                  <FolderOpenIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
               以下のURLをOBSブラウザソースやブラウザで開くとコメントが表示されます
             </Typography>
@@ -351,7 +359,16 @@ function App(): JSX.Element {
                       {plugin.settings && (
                         <Tooltip title="設定">
                           <IconButton
-                            onClick={() => toggleExpanded(plugin.id)}
+                            onClick={() => {
+                              if (plugin.settingsPopup) {
+                                window.open(
+                                  `${BASE_URL}/plugins/${plugin.id}/settings/?pluginId=${plugin.id}`,
+                                  `nicomview-settings-${plugin.id}`
+                                )
+                              } else {
+                                toggleExpanded(plugin.id)
+                              }
+                            }}
                             size="small"
                             data-testid={`settings-toggle-${plugin.id}`}
                           >
@@ -366,7 +383,7 @@ function App(): JSX.Element {
                       </Tooltip>
                     </Box>
                   </Box>
-                  {plugin.settings && (
+                  {plugin.settings && !plugin.settingsPopup && (
                     <Collapse in={expandedPlugin === plugin.id}>
                       <Box sx={{ mt: 1, mb: 1 }}>
                         <iframe

@@ -28,6 +28,7 @@ export interface PluginManifest {
   overlay: boolean
   defaultFontSize?: number
   settings?: boolean
+  settingsPopup?: boolean
 }
 
 export interface PluginDescriptor extends PluginManifest {
@@ -90,4 +91,5 @@ export interface CommentViewerAPI {
   setTtsSettings(settings: Partial<TtsSettings>): Promise<void>
   getTtsAdapters(): Promise<TtsAdapterInfo[]>
   getTtsAdapterParams(adapterId: string): Promise<TtsAdapterParamDef[]>
+  openPluginFolder(): Promise<void>
 }

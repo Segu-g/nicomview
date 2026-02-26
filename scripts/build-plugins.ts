@@ -1,14 +1,20 @@
 import { build } from 'vite'
 import react from '@vitejs/plugin-react'
-import { existsSync } from 'fs'
+import { existsSync, copyFileSync, mkdirSync } from 'fs'
 import { resolve } from 'path'
 
 const rootDir = resolve(import.meta.dirname, '..')
 
-const plugins = ['comment-list', 'comment-cards']
+const plugins = ['comment-list', 'comment-cards', 'psd-avatar']
 
 async function buildPlugins() {
   for (const pluginId of plugins) {
+    const destDir = resolve(rootDir, 'resources/plugins', pluginId)
+    mkdirSync(destDir, { recursive: true })
+    copyFileSync(
+      resolve(rootDir, 'src/plugins', pluginId, 'plugin.json'),
+      resolve(destDir, 'plugin.json'),
+    )
     console.log(`\nBuilding plugin: ${pluginId}`)
     await build({
       root: resolve(rootDir, 'src/plugins', pluginId),

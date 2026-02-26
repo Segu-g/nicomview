@@ -11,6 +11,7 @@ const navItems: NavItem[] = [
   { href: './usage.html', icon: '\u{1F4D6}', label: '使い方' },
   { href: './plugin-dev.html', icon: '\u{1F50C}', label: 'プラグイン開発' },
   { href: './tts.html', icon: '\u{1F508}', label: '読み上げ (TTS)' },
+  { href: './psd-avatar.html', icon: '\u{1F9B8}', label: 'PSD アバター' },
 ]
 
 function isActive(href: string): boolean {

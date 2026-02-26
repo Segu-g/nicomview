@@ -5,5 +5,4 @@ coverage/
 *.tsbuildinfo
 .DS_Store
 Thumbs.db
-resources/plugins/*/overlay/
-resources/plugins/*/settings/
+resources/plugins/

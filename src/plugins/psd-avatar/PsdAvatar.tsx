@@ -53,6 +53,18 @@ function drawLayer(ctx: CanvasRenderingContext2D, layer: PsdLayer): void {
   ctx.globalAlpha = prevAlpha
 }
 
+/** Pre-render base layers to an offscreen canvas */
+function buildBaseCanvas(width: number, height: number, layers: PsdLayer[]): HTMLCanvasElement {
+  const offscreen = document.createElement('canvas')
+  offscreen.width = width
+  offscreen.height = height
+  const ctx = offscreen.getContext('2d')!
+  for (const layer of layers) {
+    drawLayer(ctx, layer)
+  }
+  return offscreen
+}
+
 export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [psd, setPsd] = useState<PsdData | null>(null)
@@ -61,6 +73,43 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
   const eyeFrameRef = useRef(0)
   const ttsQueueRef = useRef<TtsQueue | null>(null)
   const resolvedRef = useRef<ResolvedLayers | null>(null)
+  const baseCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const pendingFrameRef = useRef<number | null>(null)
+  const prevMouthRef = useRef(-1)
+  const prevEyeRef = useRef(-1)
+
+  // Render once — composites base (offscreen) + current eye + current mouth
+  const render = useCallback(() => {
+    pendingFrameRef.current = null
+    const canvas = canvasRef.current
+    const resolved = resolvedRef.current
+    const baseCanvas = baseCanvasRef.current
+    if (!canvas || !resolved || !baseCanvas) return
+
+    const ctx = canvas.getContext('2d')!
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+    // Draw pre-rendered base
+    ctx.drawImage(baseCanvas, 0, 0)
+
+    // Draw current eye layer
+    const eyeLayer = resolved.eye[eyeFrameRef.current]
+    if (eyeLayer) drawLayer(ctx, eyeLayer)
+
+    // Draw current mouth layer
+    const mouthLayer = resolved.mouth[mouthLevelRef.current]
+    if (mouthLayer) drawLayer(ctx, mouthLayer)
+
+    prevMouthRef.current = mouthLevelRef.current
+    prevEyeRef.current = eyeFrameRef.current
+  }, [])
+
+  // Schedule a render if not already pending
+  const requestRender = useCallback(() => {
+    if (pendingFrameRef.current === null) {
+      pendingFrameRef.current = requestAnimationFrame(render)
+    }
+  }, [render])
 
   // Load PSD
   useEffect(() => {
@@ -70,11 +119,20 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
       .catch((e) => setError(String(e)))
   }, [props.psdFile])
 
-  // Resolve layers when PSD or config changes
+  // Resolve layers + build base canvas when PSD or config changes
   useEffect(() => {
     if (!psd) return
-    resolvedRef.current = resolveLayers(psd, props.mouth, props.eye, props.layerVisibility)
-  }, [psd, props.mouth, props.eye, props.layerVisibility])
+    const resolved = resolveLayers(psd, props.mouth, props.eye, props.layerVisibility)
+    resolvedRef.current = resolved
+    baseCanvasRef.current = buildBaseCanvas(psd.width, psd.height, resolved.base)
+
+    const canvas = canvasRef.current
+    if (canvas) {
+      canvas.width = psd.width
+      canvas.height = psd.height
+    }
+    requestRender()
+  }, [psd, props.mouth, props.eye, props.layerVisibility, requestRender])
 
   // TTS queue
   useEffect(() => {
@@ -86,12 +144,15 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
       threshold: props.threshold,
       sensitivity: props.sensitivity,
       onLipLevel: (level) => {
-        mouthLevelRef.current = level
+        if (mouthLevelRef.current !== level) {
+          mouthLevelRef.current = level
+          requestRender()
+        }
       },
     })
     ttsQueueRef.current = queue
     return () => queue.destroy()
-  }, [props.voicevoxHost, props.speaker, props.speed, props.volume, props.threshold, props.sensitivity])
+  }, [props.voicevoxHost, props.speaker, props.speed, props.volume, props.threshold, props.sensitivity, requestRender])
 
   // Eye blink timer (disabled in preview mode)
   useEffect(() => {
@@ -108,16 +169,23 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
 
       const animate = (): void => {
         frame++
+        let next: number
         if (frame <= blinkSpeed) {
-          eyeFrameRef.current = Math.min(4, Math.round((frame / blinkSpeed) * 4))
+          next = Math.min(4, Math.round((frame / blinkSpeed) * 4))
         } else {
-          eyeFrameRef.current = Math.max(0, Math.round(((totalFrames - frame) / blinkSpeed) * 4))
+          next = Math.max(0, Math.round(((totalFrames - frame) / blinkSpeed) * 4))
+        }
+
+        if (eyeFrameRef.current !== next) {
+          eyeFrameRef.current = next
+          requestRender()
         }
 
         if (frame < totalFrames) {
           animFrame = requestAnimationFrame(animate)
         } else {
           eyeFrameRef.current = 0
+          requestRender()
           scheduleNext()
         }
       }
@@ -134,49 +202,18 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
       clearTimeout(blinkTimer)
       if (animFrame !== null) cancelAnimationFrame(animFrame)
       eyeFrameRef.current = 0
+      requestRender()
     }
-  }, [props.blinkInterval, props.blinkSpeed, props.eye])
+  }, [props.blinkInterval, props.blinkSpeed, props.eye, props.preview, requestRender])
 
-  // Render loop
+  // Cleanup pending frame on unmount
   useEffect(() => {
-    if (!psd) return
-
-    const canvas = canvasRef.current
-    if (!canvas) return
-    canvas.width = psd.width
-    canvas.height = psd.height
-    const ctx = canvas.getContext('2d')!
-
-    let animId: number
-
-    const render = (): void => {
-      ctx.clearRect(0, 0, psd.width, psd.height)
-
-      const resolved = resolvedRef.current
-      if (!resolved) {
-        animId = requestAnimationFrame(render)
-        return
+    return () => {
+      if (pendingFrameRef.current !== null) {
+        cancelAnimationFrame(pendingFrameRef.current)
       }
-
-      // Draw base layers
-      for (const layer of resolved.base) {
-        drawLayer(ctx, layer)
-      }
-
-      // Draw current eye layer
-      const eyeLayer = resolved.eye[eyeFrameRef.current]
-      if (eyeLayer) drawLayer(ctx, eyeLayer)
-
-      // Draw current mouth layer
-      const mouthLayer = resolved.mouth[mouthLevelRef.current]
-      if (mouthLayer) drawLayer(ctx, mouthLayer)
-
-      animId = requestAnimationFrame(render)
     }
-    animId = requestAnimationFrame(render)
-
-    return () => cancelAnimationFrame(animId)
-  }, [psd])
+  }, [])
 
   // Test speak via postMessage
   useEffect(() => {

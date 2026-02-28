@@ -38,8 +38,8 @@ import{j as e,L as s,c as n}from"./style.js";function i(){return e.jsxs(s,{title
 }`})}),e.jsx("h4",{children:"operatorComment"}),e.jsx("pre",{children:e.jsx("code",{children:`{
   "event": "operatorComment",
   "data": {
-    "content": "運営コメントテキスト",
-    "userName": "運営"
+    "content": "放送者コメントテキスト",
+    "userName": "放送者"
   }
 }`})}),e.jsx("h3",{children:"接続の実装例"}),e.jsx("pre",{children:e.jsx("code",{children:`const ws = new WebSocket('ws://localhost:3940')
 

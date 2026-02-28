@@ -147,7 +147,7 @@ npm run dev`}</code>
             <tr><td>ギフト</td><td>ギフト（投げ銭）イベント</td></tr>
             <tr><td>エモーション</td><td>エモーションスタンプ</td></tr>
             <tr><td>通知</td><td>システム通知</td></tr>
-            <tr><td>運営コメント</td><td>運営からのコメント</td></tr>
+            <tr><td>放送者コメント</td><td>放送者からのコメント</td></tr>
           </tbody>
         </table>
       </section>

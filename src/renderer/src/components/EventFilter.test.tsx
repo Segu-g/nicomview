@@ -17,7 +17,7 @@ describe('EventFilter', () => {
     expect(screen.getByLabelText('ギフト')).toBeInTheDocument()
     expect(screen.getByLabelText('エモーション')).toBeInTheDocument()
     expect(screen.getByLabelText('通知')).toBeInTheDocument()
-    expect(screen.getByLabelText('運営コメント')).toBeInTheDocument()
+    expect(screen.getByLabelText('放送者コメント')).toBeInTheDocument()
   })
 
   it('全てのチェックボックスが初期状態でチェック済み', () => {

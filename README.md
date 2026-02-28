@@ -24,7 +24,7 @@
 | プラグイン | URL | 説明 |
 |---|---|---|
 | コメントリスト | `http://localhost:3939/plugins/comment-list/overlay/` | リスト形式（自動スクロール・200件上限） |
-| 通知カード | `http://localhost:3939/plugins/comment-cards/overlay/` | カード表示（コメント・ギフト・通知・エモーション・運営コメント対応、右からスライドイン・自動退場） |
+| 通知カード | `http://localhost:3939/plugins/comment-cards/overlay/` | カード表示（コメント・ギフト・通知・エモーション・放送者コメント対応、右からスライドイン・自動退場） |
 | PSD アバター | `http://localhost:3939/plugins/psd-avatar/overlay/` | PSD ファイルを使った 2D アバター（目パチ・口パク・VOICEVOX リップシンク・PSDTool 命名規則対応） |
 
 プラグイン一覧は `http://localhost:3939/` でも確認できる。
@@ -33,7 +33,7 @@
 
 表示するイベント種別を設定で選択可能:
 
-- コメント / ギフト / エモーション / 通知 / 運営コメント
+- コメント / ギフト / エモーション / 通知 / 放送者コメント
 
 ### PSD アバタープラグイン
 

@@ -124,8 +124,8 @@ export function PluginDevPage() {
           <code>{`{
   "event": "operatorComment",
   "data": {
-    "content": "運営コメントテキスト",
-    "userName": "運営"
+    "content": "放送者コメントテキスト",
+    "userName": "放送者"
   }
 }`}</code>
         </pre>

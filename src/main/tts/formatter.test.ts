@@ -46,10 +46,10 @@ describe('formatTtsText', () => {
       expect(formatTtsText(DEFAULT_TTS_TEMPLATES.notification, { message: '' })).toBeNull()
     })
 
-    it('operatorComment: 運営コメント: を付けて返す', () => {
+    it('operatorComment: 放送者コメント: を付けて返す', () => {
       expect(
         formatTtsText(DEFAULT_TTS_TEMPLATES.operatorComment, { content: 'お知らせ' })
-      ).toBe('運営コメント: お知らせ')
+      ).toBe('放送者コメント: お知らせ')
     })
   })
 

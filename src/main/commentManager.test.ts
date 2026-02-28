@@ -125,7 +125,7 @@ describe('CommentManager', () => {
 
     it('nicomget の operatorComment イベントを broadcast に流す', async () => {
       await manager.connect('lv123456789')
-      const opComment = { content: '運営コメント' }
+      const opComment = { content: '放送者コメント' }
 
       mockProvider.emit('operatorComment', opComment)
 

@@ -19,7 +19,7 @@ export const DEFAULT_TTS_TEMPLATES: Record<CommentEventType, string> = {
   gift: '{userName}さんが{itemName}を贈りました',
   emotion: '{content}',
   notification: '{message}',
-  operatorComment: '運営コメント: {content}'
+  operatorComment: '放送者コメント: {content}'
 }
 
 export type PluginSettings = Record<string, string | number | boolean>

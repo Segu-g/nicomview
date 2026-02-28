@@ -137,8 +137,8 @@ export function TtsPage() {
               <td><code>{'{message}'}</code></td>
             </tr>
             <tr>
-              <td>運営コメント</td>
-              <td><code>{'運営コメント: {content}'}</code></td>
+              <td>放送者コメント</td>
+              <td><code>{'放送者コメント: {content}'}</code></td>
               <td><code>{'{content}'}</code>, <code>{'{userName}'}</code></td>
             </tr>
           </tbody>
@@ -163,7 +163,7 @@ export function TtsPage() {
         <ul>
           <li>通常コメント → ずんだもん</li>
           <li>ギフト → 四国めたん</li>
-          <li>運営コメント → 春日部つむぎ</li>
+          <li>放送者コメント → 春日部つむぎ</li>
         </ul>
         <p>設定しない場合は、デフォルトのキャラクターが使用されます。</p>
       </section>

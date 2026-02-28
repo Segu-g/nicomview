@@ -482,23 +482,24 @@ function App(): JSX.Element {
                           <Typography variant="caption" color="text.secondary">
                             {param.label}
                           </Typography>
-                          <Select
-                            fullWidth
-                            size="small"
-                            value={value}
-                            onChange={(e) => {
-                              handleTtsChange({
-                                adapterSettings: { ...ttsSettings.adapterSettings, [param.key]: e.target.value }
-                              })
-                            }}
-                          >
-                            {(param.options ?? []).map((opt) => (
-                              <MenuItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          {param.options?.length === 0 && (
+                          {(param.options?.length ?? 0) > 0 ? (
+                            <Select
+                              fullWidth
+                              size="small"
+                              value={value}
+                              onChange={(e) => {
+                                handleTtsChange({
+                                  adapterSettings: { ...ttsSettings.adapterSettings, [param.key]: e.target.value }
+                                })
+                              }}
+                            >
+                              {param.options!.map((opt) => (
+                                <MenuItem key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          ) : (
                             <Typography variant="caption" color="text.secondary">
                               エンジンが起動していません
                             </Typography>
@@ -610,7 +611,7 @@ function App(): JSX.Element {
                                   if (val === '') {
                                     delete next[eventType]
                                   } else {
-                                    next[eventType] = val
+                                    next[eventType] = isNaN(Number(val)) ? val : Number(val)
                                   }
                                   handleTtsChange({ speakerOverrides: next })
                                 }}

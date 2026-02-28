@@ -23,13 +23,13 @@
   --card-bg: rgba(255, 255, 255, 0.92);
   --placeholder-bg: #bdbdbd;
   --operator-accent: #7b1fa2;
-  --operator-bg: rgba(156, 39, 176, 0.1);
+  --operator-bg: rgba(243, 229, 245, 0.92);
   --operator-border: rgba(156, 39, 176, 0.3);
   --gift-accent: #e65100;
-  --gift-bg: rgba(255, 167, 38, 0.12);
+  --gift-bg: rgba(255, 243, 224, 0.92);
   --gift-border: rgba(255, 167, 38, 0.3);
   --notification-accent: #1565c0;
-  --notification-bg: rgba(33, 150, 243, 0.1);
+  --notification-bg: rgba(227, 242, 253, 0.92);
   --notification-border: rgba(33, 150, 243, 0.3);
   --emotion-accent: #757575;
 }

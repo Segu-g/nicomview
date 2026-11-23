@@ -5,8 +5,9 @@ test.describe('Plugin system', () => {
     await mainPage.waitForLoadState('networkidle')
 
     await expect(mainPage.locator('text=表示プラグイン')).toBeVisible()
-    await expect(mainPage.locator('text=コメントリスト')).toBeVisible()
-    await expect(mainPage.locator('text=ニコニコ風スクロール')).toBeVisible()
+    for (const name of ['コメントリスト', '通知カード', 'PSD アバター']) {
+      await expect(mainPage.getByText(name, { exact: true })).toBeVisible()
+    }
   })
 
   test('plugin serves static files via HTTP', async ({ electronApp }) => {
@@ -23,7 +24,9 @@ test.describe('Plugin system', () => {
     await mainPage.waitForLoadState('networkidle')
 
     await expect(mainPage.locator('text=表示イベント')).toBeVisible()
-    await expect(mainPage.locator('text=コメント')).toBeVisible()
-    await expect(mainPage.locator('text=ギフト')).toBeVisible()
+    // 読み上げ側の同名チェックボックスは折りたたみ中で role ツリーに現れない
+    for (const name of ['コメント', 'ギフト']) {
+      await expect(mainPage.getByRole('checkbox', { name, exact: true })).toBeVisible()
+    }
   })
 })

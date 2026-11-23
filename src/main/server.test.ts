@@ -1,3 +1,5 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
+import os from 'os'
 import path from 'path'
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll, afterEach } from 'vitest'
 import { createServer, type CommentServer } from './server'
@@ -5,7 +7,6 @@ import WebSocket from 'ws'
 
 const TEST_HTTP_PORT = 13939
 const TEST_WS_PORT = 13940
-const PLUGIN_PATH = path.join(__dirname, '../../resources/plugins/comment-list')
 
 function waitForMessage(ws: WebSocket): Promise<unknown> {
   return new Promise((resolve) => {
@@ -38,17 +39,22 @@ function connectAndCollect(port: number): Promise<{ ws: WebSocket; messages: unk
 
 describe('server', () => {
   let server: CommentServer
+  let pluginDir: string
 
   beforeAll(async () => {
+    pluginDir = mkdtempSync(path.join(os.tmpdir(), 'nicomview-server-'))
+    mkdirSync(path.join(pluginDir, 'overlay'))
+    writeFileSync(path.join(pluginDir, 'overlay/index.html'), '<title>NicomView</title>')
     server = await createServer({
       httpPort: TEST_HTTP_PORT,
       wsPort: TEST_WS_PORT
     })
-    server.registerPluginRoute('comment-list', PLUGIN_PATH)
+    server.registerPluginRoute('comment-list', pluginDir)
   })
 
   afterAll(async () => {
     await server.close()
+    rmSync(pluginDir, { recursive: true, force: true })
   })
 
   describe('broadcast', () => {

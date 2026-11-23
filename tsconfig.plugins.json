@@ -8,6 +8,7 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "types": ["@testing-library/jest-dom/vitest"],
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src/plugins/**/*.ts", "src/plugins/**/*.tsx"]

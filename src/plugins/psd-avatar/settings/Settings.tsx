@@ -6,7 +6,7 @@ import type { PluginSettings, PluginSettingsMessage } from '../../../shared/type
 import { pluginFileUrl, pluginOverlayUrl } from '../../../shared/constants'
 import { PLUGIN_MESSAGE } from '../../../shared/pluginMessages'
 import { loadPsd, type PsdData, type PsdLayer } from '../psdLoader'
-import { fetchSpeakers, type VoicevoxSpeaker } from '../voicevoxClient'
+import { VoiceSettings } from './VoiceSettings'
 import {
   ALL_ROLE_KEYS, DEFAULTS, PLUGIN_ID, RANGES,
   parseLayerPaths, parseLayerVisibility, type RawSettings,
@@ -66,8 +66,6 @@ export function Settings({ pluginId }: Props) {
   const [psd, setPsd] = useState<PsdData | null>(null)
   const [psdError, setPsdError] = useState<string | null>(null)
   const [psdLoading, setPsdLoading] = useState(false)
-  const [speakers, setSpeakers] = useState<VoicevoxSpeaker[]>([])
-  const [speakersError, setSpeakersError] = useState<string | null>(null)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [previewAnimate, setPreviewAnimate] = useState(false)
   const [testText, setTestText] = useState('こんにちは')
@@ -142,21 +140,6 @@ export function Settings({ pluginId }: Props) {
     }
     setPsdLoading(false)
   }, [settings.psdFile])
-
-  const handleFetchSpeakers = useCallback(async () => {
-    setSpeakersError(null)
-    try {
-      const host = String(settings.voicevoxHost)
-      const list = await fetchSpeakers(host)
-      setSpeakers(list)
-    } catch (e) {
-      setSpeakersError(String(e))
-    }
-  }, [settings.voicevoxHost])
-
-  useEffect(() => {
-    if (ready) handleFetchSpeakers()
-  }, [ready]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTestSpeak = useCallback(() => {
     if (!testText.trim()) return
@@ -234,13 +217,6 @@ export function Settings({ pluginId }: Props) {
   const leafLayers = psd
     ? psd.layers.filter((l) => !l.isGroup && l.canvas !== null)
     : []
-
-  const speakerOptions: { id: number; label: string }[] = []
-  for (const s of speakers) {
-    for (const style of s.styles) {
-      speakerOptions.push({ id: style.id, label: `${s.name} (${style.name})` })
-    }
-  }
 
   return (
     <div className="settings-form">
@@ -409,56 +385,8 @@ export function Settings({ pluginId }: Props) {
         </div>
       )}
 
-      {/* VOICEVOX 設定 */}
-      <div className="settings-section">
-        <div className="settings-section-title">VOICEVOX 設定</div>
-        <div className="settings-row">
-          <label className="settings-label">
-            API ホスト
-            <input
-              type="text"
-              value={settings.voicevoxHost}
-              onChange={(e) => update('voicevoxHost', e.target.value)}
-            />
-          </label>
-          <button className="settings-btn" onClick={handleFetchSpeakers}>
-            話者取得
-          </button>
-        </div>
-        {speakersError && <div className="error-text">{speakersError}</div>}
-        <label className="settings-label">
-          スピーカー
-          <select
-            value={settings.speaker}
-            onChange={(e) => update('speaker', Number(e.target.value))}
-          >
-            {speakerOptions.length === 0 && (
-              <option value={settings.speaker}>ID: {settings.speaker}</option>
-            )}
-            {speakerOptions.map((opt) => (
-              <option key={opt.id} value={opt.id}>{opt.label}</option>
-            ))}
-          </select>
-        </label>
-        <label className="settings-label">
-          速度
-          <input
-            type="number"
-            {...RANGES.speed}
-            value={settings.speed}
-            onChange={(e) => update('speed', Number(e.target.value))}
-          />
-        </label>
-        <label className="settings-label">
-          音量
-          <input
-            type="number"
-            {...RANGES.volume}
-            value={settings.volume}
-            onChange={(e) => update('volume', Number(e.target.value))}
-          />
-        </label>
-      </div>
+      {/* 読み上げ設定 */}
+      <VoiceSettings settings={settings} onChange={update} />
 
       {/* 口パクパラメータ */}
       <div className="settings-section">

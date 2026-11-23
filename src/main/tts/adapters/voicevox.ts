@@ -2,19 +2,10 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import { execFile } from 'child_process'
+import { fetchSpeakerOptions, synthesize } from '../../../shared/tts/voicevox'
 import type { TtsAdapterParamDef } from '../../../shared/types'
 import { PORT_RANGE, VOICEVOX_DEFAULTS } from '../../../shared/constants'
 import type { TtsAdapter } from '../types'
-
-interface VoicevoxStyle {
-  name: string
-  id: number
-}
-
-interface VoicevoxSpeaker {
-  name: string
-  styles: VoicevoxStyle[]
-}
 
 export class VoicevoxAdapter implements TtsAdapter {
   readonly id = 'voicevox'
@@ -35,6 +26,10 @@ export class VoicevoxAdapter implements TtsAdapter {
     if (settings.host !== undefined) this.host = String(settings.host)
     if (settings.port !== undefined) this.port = Number(settings.port)
     if (settings.speakerId !== undefined) this.speakerId = Number(settings.speakerId)
+  }
+
+  private get baseUrl(): string {
+    return `http://${this.host}:${this.port}`
   }
 
   async getParamDefs(): Promise<TtsAdapterParamDef[]> {
@@ -65,16 +60,7 @@ export class VoicevoxAdapter implements TtsAdapter {
     }
 
     try {
-      const res = await fetch(`http://${this.host}:${this.port}/speakers`)
-      if (res.ok) {
-        const speakers = (await res.json()) as VoicevoxSpeaker[]
-        speakerDef.options = speakers.flatMap((speaker) =>
-          speaker.styles.map((style) => ({
-            value: style.id,
-            label: `${speaker.name} (${style.name})`
-          }))
-        )
-      }
+      speakerDef.options = await fetchSpeakerOptions(this.baseUrl)
     } catch {
       // VOICEVOX未起動時は空のオプションで返す
     }
@@ -84,36 +70,10 @@ export class VoicevoxAdapter implements TtsAdapter {
   }
 
   async speak(text: string, speed: number, volume: number, speakerOverride?: number | string): Promise<void> {
-    const baseUrl = `http://${this.host}:${this.port}`
     const speaker = speakerOverride !== undefined ? Number(speakerOverride) : this.speakerId
+    const wavBuffer = Buffer.from(await synthesize(text, speaker, speed, volume, this.baseUrl))
 
-    // 1. POST /audio_query
-    const queryRes = await fetch(
-      `${baseUrl}/audio_query?text=${encodeURIComponent(text)}&speaker=${speaker}`,
-      { method: 'POST' }
-    )
-    if (!queryRes.ok) {
-      throw new Error(`audio_query failed: ${queryRes.status}`)
-    }
-    const query = (await queryRes.json()) as Record<string, unknown>
-
-    // Apply speed and volume
-    query.speedScale = speed
-    query.volumeScale = volume
-
-    // 2. POST /synthesis
-    const synthRes = await fetch(`${baseUrl}/synthesis?speaker=${speaker}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(query)
-    })
-    if (!synthRes.ok) {
-      throw new Error(`synthesis failed: ${synthRes.status}`)
-    }
-
-    const wavBuffer = Buffer.from(await synthRes.arrayBuffer())
-
-    // 3. Write to temp file and play
+    // Write to temp file and play
     const tmpFile = path.join(os.tmpdir(), `nicomview-tts-${Date.now()}.wav`)
     fs.writeFileSync(tmpFile, wavBuffer)
 
@@ -130,7 +90,7 @@ export class VoicevoxAdapter implements TtsAdapter {
 
   async isAvailable(): Promise<boolean> {
     try {
-      const res = await fetch(`http://${this.host}:${this.port}/version`)
+      const res = await fetch(`${this.baseUrl}/version`)
       return res.ok
     } catch {
       return false

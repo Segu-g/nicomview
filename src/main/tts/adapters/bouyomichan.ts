@@ -1,5 +1,10 @@
 import type { TtsAdapterParamDef } from '../../../shared/types'
+import { PORT_RANGE } from '../../../shared/constants'
 import type { TtsAdapter } from '../types'
+
+/** 共通の速度・音量 1.0 に対応する棒読みちゃん側の値 */
+const SPEED_SCALE = 100
+const VOLUME_SCALE = 50
 
 export class BouyomichanAdapter implements TtsAdapter {
   readonly id = 'bouyomichan'
@@ -31,22 +36,20 @@ export class BouyomichanAdapter implements TtsAdapter {
         key: 'host',
         label: 'ホスト',
         type: 'string',
-        defaultValue: 'localhost'
+        defaultValue: this.defaultSettings.host
       },
       {
         key: 'port',
         label: 'ポート',
         type: 'number',
-        defaultValue: 50080,
-        min: 1,
-        max: 65535,
-        step: 1
+        defaultValue: this.defaultSettings.port,
+        ...PORT_RANGE
       },
       {
         key: 'voice',
         label: '声質',
         type: 'select',
-        defaultValue: 0,
+        defaultValue: this.defaultSettings.voice,
         options: [
           { value: 0, label: 'デフォルト' },
           { value: 1, label: '女性1' },
@@ -63,7 +66,7 @@ export class BouyomichanAdapter implements TtsAdapter {
         key: 'tone',
         label: '声の高さ',
         type: 'number',
-        defaultValue: -1,
+        defaultValue: this.defaultSettings.tone,
         min: -1,
         max: 200,
         step: 1
@@ -73,8 +76,8 @@ export class BouyomichanAdapter implements TtsAdapter {
 
   async speak(text: string, speed: number, volume: number, speakerOverride?: number | string): Promise<void> {
     const voice = speakerOverride !== undefined ? Number(speakerOverride) : this.voice
-    const bouyomiSpeed = Math.round(speed * 100)
-    const bouyomiVolume = Math.round(volume * 50)
+    const bouyomiSpeed = Math.round(speed * SPEED_SCALE)
+    const bouyomiVolume = Math.round(volume * VOLUME_SCALE)
 
     const url = new URL(`http://${this.host}:${this.port}/Talk`)
     url.searchParams.set('text', text)

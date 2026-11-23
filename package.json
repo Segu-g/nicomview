@@ -9,6 +9,7 @@
     "build:plugins": "tsx scripts/build-plugins.ts",
     "build": "npm run build:plugins && electron-vite build",
     "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.plugins.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

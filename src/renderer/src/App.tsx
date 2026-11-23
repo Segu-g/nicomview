@@ -46,6 +46,8 @@ import type {
   TtsAdapterParamDef
 } from '../../shared/types'
 import { ALL_EVENT_TYPES, DEFAULT_TTS_TEMPLATES } from '../../shared/types'
+import { TTS_SPEED_RANGE, TTS_VOLUME_RANGE, pluginOverlayUrl, pluginSettingsUrl } from '../../shared/constants'
+import { PLUGIN_MESSAGE } from '../../shared/pluginMessages'
 import EventFilter from './components/EventFilter'
 import { EVENT_LABELS } from './utils/eventLabels'
 
@@ -81,8 +83,6 @@ const stateColors: Record<ConnectionState, 'default' | 'warning' | 'success' | '
 const defaultPreferences: PluginPreferences = {
   enabledEvents: [...ALL_EVENT_TYPES]
 }
-
-const BASE_URL = 'http://localhost:3939'
 
 const templatePlaceholders: Record<CommentEventType, string> = {
   comment: '{userName}, {content}',
@@ -151,17 +151,17 @@ function App(): JSX.Element {
       const msg = e.data as PluginSettingsMessage
       if (!msg?.type) return
 
-      if (msg.type === 'nicomview:ready') {
+      if (msg.type === PLUGIN_MESSAGE.ready) {
         const { pluginId } = msg
         const settings = pluginSettings[pluginId] ?? {}
         const source = e.source as Window | null
         source?.postMessage(
-          { type: 'nicomview:settings-init', settings } satisfies PluginSettingsMessage,
+          { type: PLUGIN_MESSAGE.settingsInit, settings } satisfies PluginSettingsMessage,
           '*'
         )
       }
 
-      if (msg.type === 'nicomview:settings-update') {
+      if (msg.type === PLUGIN_MESSAGE.settingsUpdate) {
         const { pluginId, settings } = msg
         setPluginSettings((prev) => ({ ...prev, [pluginId]: settings }))
         window.commentViewerAPI.setPluginSettings(pluginId, settings).catch(() => {
@@ -183,16 +183,7 @@ function App(): JSX.Element {
   }, [])
 
   const buildPluginUrl = useCallback((pluginId: string) => {
-    const base = `${BASE_URL}/plugins/${pluginId}/overlay/`
-    const params = new URLSearchParams()
-    const settings = pluginSettings[pluginId]
-    if (settings) {
-      for (const [key, value] of Object.entries(settings)) {
-        if (value !== '' && value != null) params.set(key, String(value))
-      }
-    }
-    const qs = params.toString()
-    return qs ? `${base}?${qs}` : base
+    return pluginOverlayUrl(pluginId, pluginSettings[pluginId])
   }, [pluginSettings])
 
   const handleCopyUrl = useCallback(async (pluginId: string) => {
@@ -363,7 +354,7 @@ function App(): JSX.Element {
                             onClick={() => {
                               if (plugin.settingsPopup) {
                                 window.open(
-                                  `${BASE_URL}/plugins/${plugin.id}/settings/?pluginId=${plugin.id}`,
+                                  pluginSettingsUrl(plugin.id),
                                   `nicomview-settings-${plugin.id}`
                                 )
                               } else {
@@ -389,7 +380,7 @@ function App(): JSX.Element {
                       <Box sx={{ mt: 1, mb: 1 }}>
                         <iframe
                           ref={(el) => { iframeRefs.current[plugin.id] = el }}
-                          src={`${BASE_URL}/plugins/${plugin.id}/settings/?pluginId=${plugin.id}`}
+                          src={pluginSettingsUrl(plugin.id)}
                           title={`${plugin.name} 設定`}
                           data-testid={`settings-iframe-${plugin.id}`}
                           style={{
@@ -649,9 +640,7 @@ function App(): JSX.Element {
                 </Typography>
                 <Slider
                   size="small"
-                  min={0.5}
-                  max={2.0}
-                  step={0.1}
+                  {...TTS_SPEED_RANGE}
                   value={ttsSettings.speed}
                   onChange={(_e, v) => setTtsSettings({ ...ttsSettings, speed: v as number })}
                   onChangeCommitted={(_e, v) => handleTtsChange({ speed: v as number })}
@@ -664,9 +653,7 @@ function App(): JSX.Element {
                 </Typography>
                 <Slider
                   size="small"
-                  min={0}
-                  max={2.0}
-                  step={0.1}
+                  {...TTS_VOLUME_RANGE}
                   value={ttsSettings.volume}
                   onChange={(_e, v) => setTtsSettings({ ...ttsSettings, volume: v as number })}
                   onChangeCommitted={(_e, v) => handleTtsChange({ volume: v as number })}

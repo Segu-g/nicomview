@@ -1,5 +1,7 @@
 import { test as base, type Page } from '@playwright/test'
 import { _electron as electron, type ElectronApplication } from 'playwright'
+import { mkdtempSync, rmSync } from 'fs'
+import os from 'os'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { createRequire } from 'module'
@@ -17,16 +19,22 @@ type ElectronFixtures = {
 
 export const test = base.extend<ElectronFixtures>({
   electronApp: async ({}, use) => {
+    // 実ユーザーの設定・プラグインに触れないよう userData を隔離する
+    const userDataDir = mkdtempSync(path.join(os.tmpdir(), 'nicomview-e2e-'))
     const app = await electron.launch({
       executablePath: electronBin,
-      args: ['--no-sandbox', mainEntry],
+      args: ['--no-sandbox', `--user-data-dir=${userDataDir}`, mainEntry],
       env: {
         ...process.env,
         NODE_ENV: 'test'
       }
     })
-    await use(app)
-    await app.close()
+    try {
+      await use(app)
+    } finally {
+      await app.close()
+      rmSync(userDataDir, { recursive: true, force: true })
+    }
   },
 
   mainPage: async ({ electronApp }, use) => {

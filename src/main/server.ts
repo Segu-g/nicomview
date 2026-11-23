@@ -1,6 +1,7 @@
 import express from 'express'
 import { WebSocketServer, WebSocket } from 'ws'
 import http from 'http'
+import { HTTP_PORT, WS_PORT, pluginPath, pluginOverlayPath } from '../shared/constants'
 
 export interface CommentServer {
   broadcast(event: string, data: unknown): void
@@ -15,14 +16,14 @@ export interface ServerOptions {
 }
 
 export async function createServer(options: ServerOptions = {}): Promise<CommentServer> {
-  const { httpPort = 3939, wsPort = 3940 } = options
+  const { httpPort = HTTP_PORT, wsPort = WS_PORT } = options
 
   const app = express()
   const pluginIds: string[] = []
 
   app.get('/', (_req, res) => {
     const links = pluginIds
-      .map((id) => `<li><a href="/plugins/${id}/overlay/">${id}</a></li>`)
+      .map((id) => `<li><a href="${pluginOverlayPath(id)}">${id}</a></li>`)
       .join('\n')
     res.send(`<html><body><h1>NicomView Plugins</h1><ul>${links}</ul></body></html>`)
   })
@@ -67,7 +68,7 @@ export async function createServer(options: ServerOptions = {}): Promise<Comment
 
   function registerPluginRoute(pluginId: string, fsPath: string): void {
     pluginIds.push(pluginId)
-    app.use(`/plugins/${pluginId}`, express.static(fsPath))
+    app.use(pluginPath(pluginId), express.static(fsPath))
   }
 
   async function close(): Promise<void> {

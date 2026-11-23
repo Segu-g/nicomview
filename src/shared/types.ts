@@ -1,3 +1,5 @@
+import type { PLUGIN_MESSAGE } from './pluginMessages'
+
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error'
 
 export type CommentEventType = 'comment' | 'gift' | 'emotion' | 'notification' | 'operatorComment'
@@ -45,9 +47,14 @@ export interface PluginPreferences {
 }
 
 export type PluginSettingsMessage =
-  | { type: 'nicomview:ready'; pluginId: string }
-  | { type: 'nicomview:settings-update'; pluginId: string; settings: PluginSettings }
-  | { type: 'nicomview:settings-init'; settings: PluginSettings }
+  | { type: typeof PLUGIN_MESSAGE.ready; pluginId: string }
+  | { type: typeof PLUGIN_MESSAGE.settingsUpdate; pluginId: string; settings: PluginSettings }
+  | { type: typeof PLUGIN_MESSAGE.settingsInit; settings: PluginSettings }
+
+export interface PluginTestSpeakMessage {
+  type: typeof PLUGIN_MESSAGE.testSpeak
+  text: string
+}
 
 export interface TtsSettings {
   enabled: boolean

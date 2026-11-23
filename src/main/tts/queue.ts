@@ -1,6 +1,5 @@
+import { TTS_MAX_QUEUE_SIZE } from '../../shared/constants'
 import type { TtsAdapter } from './types'
-
-const MAX_QUEUE_SIZE = 30
 
 interface QueueItem {
   text: string
@@ -24,7 +23,7 @@ export class TtsQueue {
   }
 
   enqueue(text: string, speakerOverride?: number | string): void {
-    if (this.queue.length >= MAX_QUEUE_SIZE) {
+    if (this.queue.length >= TTS_MAX_QUEUE_SIZE) {
       this.queue.shift()
     }
     this.queue.push({ text, speakerOverride })

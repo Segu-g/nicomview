@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { saveJson, loadJsonRaw } from './utils/jsonStore'
+import { pluginPath } from '../shared/constants'
 import type {
   PluginManifest,
   PluginDescriptor,
@@ -65,7 +66,7 @@ export class PluginManager {
         const descriptor: PluginDescriptor = {
           ...raw,
           builtIn: false,
-          basePath: `/plugins/${raw.id}`
+          basePath: pluginPath(raw.id)
         }
         this.plugins.set(raw.id, descriptor)
       } catch {

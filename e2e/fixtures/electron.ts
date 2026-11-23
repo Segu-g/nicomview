@@ -30,6 +30,8 @@ export const test = base.extend<ElectronFixtures>({
       }
     })
     try {
+      // ウィンドウはサーバー起動前に作られるため、起動後に行われる画面ロードを待つ
+      await (await app.firstWindow()).waitForURL(/renderer\/index\.html/)
       await use(app)
     } finally {
       await app.close()

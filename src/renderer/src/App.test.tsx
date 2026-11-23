@@ -38,10 +38,6 @@ beforeEach(() => {
         settings: true
       }
     ]),
-    getPluginPreferences: vi.fn<CommentViewerAPI['getPluginPreferences']>().mockResolvedValue({
-      enabledEvents: ['comment', 'gift', 'emotion', 'notification', 'operatorComment']
-    }),
-    setPluginPreferences: vi.fn<CommentViewerAPI['setPluginPreferences']>().mockResolvedValue(undefined),
     getPluginSettings: vi.fn<CommentViewerAPI['getPluginSettings']>().mockResolvedValue({}),
     setPluginSettings: vi.fn<CommentViewerAPI['setPluginSettings']>().mockResolvedValue(undefined),
     getTtsSettings: vi.fn<CommentViewerAPI['getTtsSettings']>().mockResolvedValue({

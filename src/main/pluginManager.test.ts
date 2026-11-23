@@ -150,42 +150,6 @@ describe('PluginManager', () => {
     })
   })
 
-  describe('preferences', () => {
-    it('デフォルト設定を返す', () => {
-      const manager = new PluginManager(pluginsDir, userDataDir)
-
-      const prefs = manager.getPreferences()
-      expect(prefs.enabledEvents).toEqual([
-        'comment',
-        'gift',
-        'emotion',
-        'notification',
-        'operatorComment'
-      ])
-    })
-
-    it('設定を保存・読み込みできる', () => {
-      const manager1 = new PluginManager(pluginsDir, userDataDir)
-      manager1.setPreferences({
-        enabledEvents: ['comment', 'gift']
-      })
-
-      const manager2 = new PluginManager(pluginsDir, userDataDir)
-      const prefs = manager2.getPreferences()
-      expect(prefs.enabledEvents).toEqual(['comment', 'gift'])
-    })
-
-    it('不正なイベントタイプをフィルタする', () => {
-      const manager = new PluginManager(pluginsDir, userDataDir)
-      manager.setPreferences({
-        enabledEvents: ['comment', 'invalid' as any, 'gift']
-      })
-
-      const prefs = manager.getPreferences()
-      expect(prefs.enabledEvents).toEqual(['comment', 'gift'])
-    })
-  })
-
   describe('pluginSettings', () => {
     it('デフォルトで空のオブジェクトを返す', () => {
       const manager = new PluginManager(pluginsDir, userDataDir)

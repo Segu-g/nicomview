@@ -40,13 +40,28 @@ test.describe('Plugin system', () => {
     await expect(popup.getByLabel('音量')).toHaveValue('1')
   })
 
-  test('event filter checkboxes are visible', async ({ mainPage }) => {
-    await mainPage.waitForLoadState('networkidle')
-
-    await expect(mainPage.locator('text=表示イベント')).toBeVisible()
-    // 読み上げ側の同名チェックボックスは折りたたみ中で role ツリーに現れない
-    for (const name of ['コメント', 'ギフト']) {
-      await expect(mainPage.getByRole('checkbox', { name, exact: true })).toBeVisible()
+  test('event filter is saved per plugin and applied to its overlay', async ({ electronApp, mainPage }) => {
+    await mainPage.getByTestId('settings-toggle-comment-list').click()
+    const settings = mainPage.frameLocator('[data-testid="settings-iframe-comment-list"]')
+    for (const name of ['コメント', 'エモーション', '通知', '放送者コメント']) {
+      await settings.getByRole('checkbox', { name, exact: true }).uncheck()
     }
+    const listUrl = await mainPage.getByText(/comment-list\/overlay/).textContent()
+    expect(new URL(listUrl!).searchParams.get('events')).toBe('gift')
+    await expect(mainPage.getByText(/comment-cards\/overlay/)).not.toContainText('events=')
+
+    await electronApp.evaluate(async ({ BrowserWindow }, url) => {
+      const win = new BrowserWindow({ width: 400, height: 400 })
+      await win.loadURL(url)
+    }, listUrl!)
+    const overlay = electronApp.windows().find((p) => p.url().includes('comment-list/overlay'))!
+    await overlay.waitForTimeout(1000)
+    await electronApp.evaluate(async () => {
+      const server = (global as any).__testServer
+      server.broadcast('comment', { content: '隠すコメント' })
+      server.broadcast('gift', { userName: '贈り主', itemName: '花' })
+    })
+    await expect(overlay.getByText('贈り主')).toBeVisible()
+    await expect(overlay.getByText('隠すコメント')).toHaveCount(0)
   })
 })

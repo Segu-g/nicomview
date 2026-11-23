@@ -1,10 +1,5 @@
-import { createRoot } from 'react-dom/client'
+import { mountSettings } from '../../settings/mountSettings'
 import { Settings } from './Settings'
-import './styles.css'
+import '../../settings/styles.css'
 
-const params = new URLSearchParams(location.search)
-const pluginId = params.get('pluginId') ?? 'comment-list'
-
-createRoot(document.getElementById('root')!).render(
-  <Settings pluginId={pluginId} />
-)
+mountSettings('comment-list', Settings)

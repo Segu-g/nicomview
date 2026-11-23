@@ -7,6 +7,7 @@ import {
   type OperatorCommentData,
   type EmotionData,
 } from '../hooks/useCommentEvents'
+import type { CommentEventType } from '../../shared/types'
 import './styles.css'
 
 type CardType = 'comment' | 'operator' | 'gift' | 'notification' | 'emotion'
@@ -22,7 +23,7 @@ interface CardData {
 
 let nextId = 0
 
-export function CommentCards() {
+export function CommentCards({ enabledEvents }: { enabledEvents: CommentEventType[] }) {
   const [cards, setCards] = useState<CardData[]>([])
   const timersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map())
 
@@ -108,7 +109,7 @@ export function CommentCards() {
       timersRef.current.clear()
       setCards([])
     }, []),
-  })
+  }, enabledEvents)
 
   const handleAnimationEnd = useCallback(
     (cardId: number, e: React.AnimationEvent) => {

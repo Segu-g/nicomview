@@ -2,7 +2,6 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type {
   ConnectionState,
   PluginDescriptor,
-  PluginPreferences,
   PluginSettings,
   TtsSettings,
   TtsAdapterInfo,
@@ -32,14 +31,6 @@ const api: CommentViewerAPI = {
 
   getPlugins(): Promise<PluginDescriptor[]> {
     return ipcRenderer.invoke(IPC.getPlugins)
-  },
-
-  getPluginPreferences(): Promise<PluginPreferences> {
-    return ipcRenderer.invoke(IPC.getPluginPreferences)
-  },
-
-  setPluginPreferences(prefs: Partial<PluginPreferences>): Promise<void> {
-    return ipcRenderer.invoke(IPC.setPluginPreferences, prefs)
   },
 
   getPluginSettings(pluginId: string): Promise<PluginSettings> {

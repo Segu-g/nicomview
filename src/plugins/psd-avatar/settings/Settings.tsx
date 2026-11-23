@@ -1,11 +1,13 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import Checkbox from '@mui/material/Checkbox'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked'
-import type { PluginSettings, PluginSettingsMessage } from '../../../shared/types'
+import type { PluginTestSpeakMessage } from '../../../shared/types'
 import { pluginFileUrl, pluginOverlayUrl } from '../../../shared/constants'
 import { PLUGIN_MESSAGE } from '../../../shared/pluginMessages'
 import { loadPsd, type PsdData, type PsdLayer } from '../psdLoader'
+import type { SettingsProps } from '../../settings/mountSettings'
+import { usePluginSettings } from '../../settings/usePluginSettings'
 import { VoiceSettings } from './VoiceSettings'
 import {
   ALL_ROLE_KEYS, DEFAULTS, PLUGIN_ID, RANGES,
@@ -23,10 +25,6 @@ const ROLE_LABELS: Record<string, string> = {
   eye2: '目: 半開き',
   eye3: '目: ほぼ閉じ',
   eye4: '目: 閉じ',
-}
-
-interface Props {
-  pluginId: string
 }
 
 function isAncestorHiddenByVis(path: string, visibility: Record<string, boolean>): boolean {
@@ -60,9 +58,8 @@ function buildPreviewUrl(settings: RawSettings, animate: boolean): string {
   return pluginOverlayUrl(PLUGIN_ID, animate ? settings : { ...settings, preview: 'true' })
 }
 
-export function Settings({ pluginId }: Props) {
-  const [settings, setSettings] = useState<RawSettings>(DEFAULTS)
-  const [ready, setReady] = useState(false)
+export function Settings({ pluginId }: SettingsProps) {
+  const { settings, ready, update } = usePluginSettings(pluginId, DEFAULTS)
   const [psd, setPsd] = useState<PsdData | null>(null)
   const [psdError, setPsdError] = useState<string | null>(null)
   const [psdLoading, setPsdLoading] = useState(false)
@@ -70,62 +67,6 @@ export function Settings({ pluginId }: Props) {
   const [previewAnimate, setPreviewAnimate] = useState(false)
   const [testText, setTestText] = useState('こんにちは')
   const previewRef = useRef<HTMLIFrameElement>(null)
-
-  useEffect(() => {
-    const handler = (e: MessageEvent) => {
-      const msg = e.data as PluginSettingsMessage
-      if (msg?.type === PLUGIN_MESSAGE.settingsInit) {
-        const s = msg.settings
-        const merged: RawSettings = { ...DEFAULTS }
-        for (const [key, value] of Object.entries(s)) {
-          if (value !== '' && value != null) {
-            merged[key] = value as string | number
-          }
-        }
-        setSettings(merged)
-        setReady(true)
-      }
-    }
-    window.addEventListener('message', handler)
-    ;(window.opener || window.parent).postMessage({ type: PLUGIN_MESSAGE.ready, pluginId }, '*')
-    return () => window.removeEventListener('message', handler)
-  }, [pluginId])
-
-  const sendUpdate = useCallback(
-    (updated: RawSettings) => {
-      const ps: PluginSettings = {}
-      for (const [key, value] of Object.entries(updated)) {
-        ps[key] = value
-      }
-      ;(window.opener || window.parent).postMessage(
-        { type: PLUGIN_MESSAGE.settingsUpdate, pluginId, settings: ps },
-        '*'
-      )
-    },
-    [pluginId]
-  )
-
-  const update = useCallback(
-    (key: string, value: string | number) => {
-      setSettings((prev) => {
-        const next = { ...prev, [key]: value }
-        sendUpdate(next)
-        return next
-      })
-    },
-    [sendUpdate]
-  )
-
-  const updateMultiple = useCallback(
-    (updates: RawSettings) => {
-      setSettings((prev) => {
-        const next = { ...prev, ...updates }
-        sendUpdate(next)
-        return next
-      })
-    },
-    [sendUpdate]
-  )
 
   const handleLoadPsd = useCallback(async () => {
     setPsdLoading(true)
@@ -144,7 +85,7 @@ export function Settings({ pluginId }: Props) {
   const handleTestSpeak = useCallback(() => {
     if (!testText.trim()) return
     previewRef.current?.contentWindow?.postMessage(
-      { type: PLUGIN_MESSAGE.testSpeak, text: testText.trim() },
+      { type: PLUGIN_MESSAGE.testSpeak, text: testText.trim() } satisfies PluginTestSpeakMessage,
       '*'
     )
   }, [testText])

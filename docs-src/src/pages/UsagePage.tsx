@@ -182,6 +182,12 @@ npm run dev`}</code>
               </td>
             </tr>
             <tr>
+              <td>表示イベント</td>
+              <td>両方</td>
+              <td>すべて</td>
+              <td>表示するイベント種別</td>
+            </tr>
+            <tr>
               <td>表示時間 (秒)</td>
               <td>通知カードのみ</td>
               <td>60</td>

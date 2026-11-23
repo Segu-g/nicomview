@@ -42,10 +42,6 @@ export interface PluginDescriptor extends PluginManifest {
   basePath: string
 }
 
-export interface PluginPreferences {
-  enabledEvents: CommentEventType[]
-}
-
 export type PluginSettingsMessage =
   | { type: typeof PLUGIN_MESSAGE.ready; pluginId: string }
   | { type: typeof PLUGIN_MESSAGE.settingsUpdate; pluginId: string; settings: PluginSettings }
@@ -101,8 +97,6 @@ export interface CommentViewerAPI {
   disconnect(): Promise<void>
   onStateChange(callback: (state: ConnectionState) => void): () => void
   getPlugins(): Promise<PluginDescriptor[]>
-  getPluginPreferences(): Promise<PluginPreferences>
-  setPluginPreferences(prefs: Partial<PluginPreferences>): Promise<void>
   getPluginSettings(pluginId: string): Promise<PluginSettings>
   setPluginSettings(pluginId: string, settings: PluginSettings): Promise<void>
   getTtsSettings(): Promise<TtsSettings>

@@ -5,13 +5,9 @@ import { pluginPath } from '../shared/constants'
 import type {
   PluginManifest,
   PluginDescriptor,
-  PluginPreferences,
-  PluginSettings,
-  CommentEventType
+  PluginSettings
 } from '../shared/types'
-import { ALL_EVENT_TYPES, isValidEventType } from '../shared/types'
 
-const PREFERENCES_FILE = 'plugin-preferences.json'
 const SETTINGS_FILE = 'plugin-settings.json'
 
 function isValidManifest(obj: unknown): obj is PluginManifest {
@@ -28,17 +24,13 @@ function isValidManifest(obj: unknown): obj is PluginManifest {
 
 export class PluginManager {
   private plugins: Map<string, PluginDescriptor> = new Map()
-  private preferences: PluginPreferences
-  private preferencesPath: string
   private settingsPath: string
   private allSettings: Record<string, PluginSettings>
   private pluginsDir: string
 
   constructor(pluginsDir: string, userDataDir: string) {
     this.pluginsDir = pluginsDir
-    this.preferencesPath = path.join(userDataDir, PREFERENCES_FILE)
     this.settingsPath = path.join(userDataDir, SETTINGS_FILE)
-    this.preferences = this.loadPreferences()
     this.allSettings = this.loadSettings()
   }
 
@@ -83,17 +75,6 @@ export class PluginManager {
     return this.plugins.get(id)
   }
 
-  getPreferences(): PluginPreferences {
-    return { ...this.preferences }
-  }
-
-  setPreferences(partial: Partial<PluginPreferences>): void {
-    if (partial.enabledEvents !== undefined) {
-      this.preferences.enabledEvents = partial.enabledEvents.filter(isValidEventType)
-    }
-    this.savePreferences()
-  }
-
   getPluginSettings(id: string): PluginSettings {
     return { ...(this.allSettings[id] ?? {}) }
   }
@@ -120,23 +101,5 @@ export class PluginManager {
 
   private saveSettings(): void {
     saveJson(this.settingsPath, this.allSettings)
-  }
-
-  private loadPreferences(): PluginPreferences {
-    const defaults: PluginPreferences = { enabledEvents: [...ALL_EVENT_TYPES] }
-    const raw = loadJsonRaw(this.preferencesPath, 'PluginManager')
-    if (typeof raw === 'object' && raw !== null) {
-      const r = raw as Record<string, unknown>
-      return {
-        enabledEvents: Array.isArray(r.enabledEvents)
-          ? r.enabledEvents.filter(isValidEventType)
-          : defaults.enabledEvents
-      }
-    }
-    return defaults
-  }
-
-  private savePreferences(): void {
-    saveJson(this.preferencesPath, this.preferences)
   }
 }

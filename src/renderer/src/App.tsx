@@ -37,7 +37,6 @@ import type {
   ConnectionState,
   CommentEventType,
   PluginDescriptor,
-  PluginPreferences,
   PluginSettings,
   PluginSettingsMessage,
   TtsSettings,
@@ -50,8 +49,8 @@ import { PLUGIN_MESSAGE } from '../../shared/pluginMessages'
 import { SpeakerSelect } from '../../shared/ui/SpeakerSelect'
 import { SpeedVolumeFields } from '../../shared/ui/SpeedVolumeFields'
 import { TtsParamFields } from '../../shared/ui/TtsParamFields'
-import EventFilter from './components/EventFilter'
-import { EVENT_LABELS } from './utils/eventLabels'
+import { toggleEvent } from '../../shared/eventFilter'
+import { EVENT_LABELS } from '../../shared/eventLabels'
 
 const theme = createTheme({
   colorSchemes: {
@@ -82,9 +81,8 @@ const stateColors: Record<ConnectionState, 'default' | 'warning' | 'success' | '
   error: 'error'
 }
 
-const defaultPreferences: PluginPreferences = {
-  enabledEvents: [...ALL_EVENT_TYPES]
-}
+/** 設定項目が最も多い通知カードが収まる高さ */
+const SETTINGS_IFRAME_HEIGHT = 350
 
 const templatePlaceholders: Record<CommentEventType, string> = {
   comment: '{userName}, {content}',
@@ -101,8 +99,6 @@ function App(): JSX.Element {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [plugins, setPlugins] = useState<PluginDescriptor[]>([])
-  const [preferences, setPreferences] = useState<PluginPreferences>(defaultPreferences)
-  const [pluginsLoaded, setPluginsLoaded] = useState(false)
   const [pluginSettings, setPluginSettings] = useState<Record<string, PluginSettings>>({})
   const [expandedPlugin, setExpandedPlugin] = useState<string | null>(null)
   const iframeRefs = useRef<Record<string, HTMLIFrameElement | null>>({})
@@ -136,12 +132,10 @@ function App(): JSX.Element {
   useEffect(() => {
     Promise.all([
       window.commentViewerAPI.getPlugins(),
-      window.commentViewerAPI.getPluginPreferences(),
       window.commentViewerAPI.getTtsSettings(),
       window.commentViewerAPI.getTtsAdapters()
-    ]).then(async ([loadedPlugins, loadedPrefs, loadedTts, loadedAdapters]) => {
+    ]).then(async ([loadedPlugins, loadedTts, loadedAdapters]) => {
       setPlugins(loadedPlugins)
-      setPreferences(loadedPrefs)
       setTtsSettings(loadedTts)
       setTtsAdapters(loadedAdapters)
 
@@ -150,7 +144,6 @@ function App(): JSX.Element {
         settings[p.id] = await window.commentViewerAPI.getPluginSettings(p.id)
       }
       setPluginSettings(settings)
-      setPluginsLoaded(true)
 
       // 保存済みアダプターのパラメーター定義を読み込む
       if (loadedTts.adapterId) {
@@ -205,21 +198,6 @@ function App(): JSX.Element {
     setCopiedId(pluginId)
     setTimeout(() => setCopiedId(null), 2000)
   }, [buildPluginUrl])
-
-  const handlePreferencesChange = useCallback(
-    async (partial: Partial<PluginPreferences>) => {
-      const prev = preferences
-      const updated = { ...preferences, ...partial }
-      setPreferences(updated)
-      try {
-        await window.commentViewerAPI.setPluginPreferences(partial)
-      } catch {
-        setPreferences(prev)
-        setSaveError('表示イベント設定の保存に失敗しました')
-      }
-    },
-    [preferences]
-  )
 
   const handleTtsChange = useCallback(
     async (partial: Partial<TtsSettings>) => {
@@ -419,7 +397,7 @@ function App(): JSX.Element {
                           data-testid={`settings-iframe-${plugin.id}`}
                           style={{
                             width: '100%',
-                            height: 200,
+                            height: SETTINGS_IFRAME_HEIGHT,
                             border: 'none',
                             borderRadius: 8,
                             background: '#1e1e1e'
@@ -433,20 +411,6 @@ function App(): JSX.Element {
             </List>
           </CardContent>
         </Card>
-
-        {pluginsLoaded && (
-          <Card variant="outlined" sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                表示イベント
-              </Typography>
-              <EventFilter
-                preferences={preferences}
-                onPreferencesChange={handlePreferencesChange}
-              />
-            </CardContent>
-          </Card>
-        )}
 
         {ttsSettings && (
           <Card variant="outlined">
@@ -534,10 +498,9 @@ function App(): JSX.Element {
                             size="small"
                             checked={enabled}
                             onChange={(e) => {
-                              const next = e.target.checked
-                                ? [...ttsSettings.enabledEvents, eventType]
-                                : ttsSettings.enabledEvents.filter((t: CommentEventType) => t !== eventType)
-                              handleTtsChange({ enabledEvents: next })
+                              handleTtsChange({
+                                enabledEvents: toggleEvent(ttsSettings.enabledEvents, eventType, e.target.checked)
+                              })
                             }}
                           />
                         }

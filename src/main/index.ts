@@ -12,7 +12,7 @@ import { PluginManager } from './pluginManager'
 import { TtsManager } from './tts/ttsManager'
 import { VoicevoxAdapter } from './tts/adapters/voicevox'
 import { BouyomichanAdapter } from './tts/adapters/bouyomichan'
-import type { CommentEventType, PluginPreferences, PluginSettings, TtsSettings } from '../shared/types'
+import type { CommentEventType, PluginSettings, TtsSettings } from '../shared/types'
 import { HTTP_PORT, WS_PORT } from '../shared/constants'
 import { IPC } from '../shared/ipc'
 
@@ -108,14 +108,6 @@ async function createWindow(): Promise<void> {
 
   ipcMain.handle(IPC.getPlugins, () => {
     return pluginManager?.getPlugins() ?? []
-  })
-
-  ipcMain.handle(IPC.getPluginPreferences, () => {
-    return pluginManager?.getPreferences() ?? null
-  })
-
-  ipcMain.handle(IPC.setPluginPreferences, (_event, prefs: Partial<PluginPreferences>) => {
-    pluginManager?.setPreferences(prefs)
   })
 
   ipcMain.handle(IPC.getPluginSettings, (_event, pluginId: string) => {

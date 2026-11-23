@@ -43,6 +43,8 @@ export interface NumberRange {
 
 export const TTS_SPEED_RANGE: NumberRange = { min: 0.5, max: 2.0, step: 0.1 }
 export const TTS_VOLUME_RANGE: NumberRange = { min: 0, max: 2.0, step: 0.1 }
+/** 接続先の変更後、話者一覧を再取得するまでの待ち時間 */
+export const ENGINE_RELOAD_DELAY_MS = 500
 export const TTS_MAX_QUEUE_SIZE = 30
 export const PORT_RANGE: NumberRange = { min: 1, max: 65535, step: 1 }
 

@@ -1,5 +1,5 @@
 import { TTS_MAX_QUEUE_SIZE } from '../../shared/constants'
-import { synthesize } from './voicevoxClient'
+import { synthesize } from '../../shared/tts/voicevox'
 import { LipSync } from './lipSync'
 
 export interface TtsQueueOptions {

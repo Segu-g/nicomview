@@ -165,7 +165,7 @@ export function PsdAvatarPage() {
           </thead>
           <tbody>
             <tr><td>API ホスト</td><td>—</td><td><code>http://localhost:50021</code></td></tr>
-            <tr><td>スピーカー</td><td>—</td><td>0</td></tr>
+            <tr><td>キャラクター</td><td>—</td><td>0</td></tr>
             <tr><td>速度</td><td>0.5 〜 2.0</td><td>1.0</td></tr>
             <tr><td>音量</td><td>0 〜 2.0</td><td>1.0</td></tr>
           </tbody>

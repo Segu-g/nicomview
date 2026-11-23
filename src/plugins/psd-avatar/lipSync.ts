@@ -1,8 +1,14 @@
+import { MAX_FRAME } from './config'
+
+const FFT_SIZE = 256
+/** getByteTimeDomainData の無音値（8bit の中央） */
+const PCM_CENTER = 128
+
 type LipSyncState = 'closed' | 'opening' | 'open' | 'closing'
 
 export class LipSync {
   private analyser: AnalyserNode
-  private dataArray: Uint8Array
+  private dataArray: Uint8Array<ArrayBuffer>
   private threshold: number
   private holdFrames: number
   private step: number
@@ -14,14 +20,14 @@ export class LipSync {
   constructor(
     audioContext: AudioContext,
     source: AudioNode,
-    opts: { threshold?: number; holdFrames?: number; transitionFrames?: number } = {}
+    opts: { threshold: number; holdFrames: number; transitionFrames: number }
   ) {
-    this.threshold = opts.threshold ?? 0.15
-    this.holdFrames = opts.holdFrames ?? 8
-    this.step = 4 / (opts.transitionFrames ?? 4)
+    this.threshold = opts.threshold
+    this.holdFrames = opts.holdFrames
+    this.step = MAX_FRAME / opts.transitionFrames
 
     this.analyser = audioContext.createAnalyser()
-    this.analyser.fftSize = 256
+    this.analyser.fftSize = FFT_SIZE
     source.connect(this.analyser)
 
     this.dataArray = new Uint8Array(this.analyser.frequencyBinCount)
@@ -39,7 +45,7 @@ export class LipSync {
 
       let sum = 0
       for (let i = 0; i < this.dataArray.length; i++) {
-        const v = (this.dataArray[i] - 128) / 128
+        const v = (this.dataArray[i] - PCM_CENTER) / PCM_CENTER
         sum += v * v
       }
       const rms = Math.sqrt(sum / this.dataArray.length)
@@ -51,9 +57,9 @@ export class LipSync {
           break
 
         case 'opening':
-          this._level = Math.min(4, this._level + this.step)
-          if (this._level >= 4) {
-            this._level = 4
+          this._level = Math.min(MAX_FRAME, this._level + this.step)
+          if (this._level >= MAX_FRAME) {
+            this._level = MAX_FRAME
             this.state = 'open'
           }
           break

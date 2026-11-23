@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events'
 import type { ConnectionState } from '../shared/types'
+import { ALL_EVENT_TYPES } from '../shared/types'
 
 interface ProviderOptions {
   liveId: string
@@ -19,8 +20,6 @@ interface Provider extends EventEmitter {
 type ProviderFactory = (options: ProviderOptions) => Provider
 type BroadcastFn = (event: string, data: unknown) => void
 type StateChangeFn = (state: ConnectionState) => void
-
-const RELAY_EVENTS = ['comment', 'gift', 'emotion', 'notification', 'operatorComment'] as const
 
 export class CommentManager {
   private provider: Provider | null = null
@@ -63,7 +62,7 @@ export class CommentManager {
       this.broadcasterIconUrl = metadata.broadcasterIconUrl
     })
 
-    for (const event of RELAY_EVENTS) {
+    for (const event of ALL_EVENT_TYPES) {
       this.provider.on(event, (data: unknown) => {
         if (event === 'operatorComment') {
           const op = data as { name?: string; iconUrl?: string }

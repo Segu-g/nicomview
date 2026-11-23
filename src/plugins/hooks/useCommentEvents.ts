@@ -1,8 +1,7 @@
 import { useCallback } from 'react'
 import type { CommentEventType } from '../../shared/types'
+import { WS_URL } from '../../shared/constants'
 import { useWebSocket } from './useWebSocket'
-
-const WS_URL = 'ws://localhost:3940'
 
 // --- Event data types ---
 

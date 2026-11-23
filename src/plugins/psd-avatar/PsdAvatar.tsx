@@ -1,26 +1,14 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { loadPsd, getLeafLayers, type PsdData, type PsdLayer } from './psdLoader'
+import { MAX_FRAME, type PsdAvatarConfig } from './config'
 import { TtsQueue } from './ttsQueue'
 import { useCommentEvents, type CommentData } from '../hooks/useCommentEvents'
+import { PLUGIN_MESSAGE } from '../../shared/pluginMessages'
 
-export interface PsdAvatarProps {
-  psdFile: string
-  voicevoxHost: string
-  speaker: number
-  speed: number
-  volume: number
-  mouth: string[][]
-  eye: string[][]
-  threshold: number
-  sensitivity: number
-  mouthTransitionFrames: number
-  blinkInterval: number
-  blinkSpeed: number
-  layerVisibility: Record<string, boolean>
-  flipX?: boolean
-  flipY?: boolean
-  preview?: boolean
-}
+export type PsdAvatarProps = PsdAvatarConfig
+
+/** まばたき間隔に対する揺らぎの幅 */
+const BLINK_JITTER_RATIO = 0.4
 
 type RenderItem =
   | { kind: 'segment'; canvas: HTMLCanvasElement }
@@ -39,14 +27,6 @@ function isHiddenByAncestor(layerPath: string, layerVisibility: Record<string, b
     if (layerVisibility[parts.slice(0, i).join('/')] === false) return true
   }
   return false
-}
-
-/** Returns the base path of a flip layer (strips :flipx / :flipy / :flipxy suffix) */
-function getBaseFlipPath(layer: PsdLayer): string {
-  const parts = layer.path.split('/')
-  const last = parts[parts.length - 1]
-  const stripped = (layer.flipX && layer.flipY) ? last.slice(0, -7) : last.slice(0, -6)
-  return [...parts.slice(0, -1), stripped].join('/')
 }
 
 /** Fill null entries with the nearest non-null neighbor */
@@ -83,7 +63,7 @@ function buildRenderSequence(
   for (const layer of leafLayers) {
     if (!layer.flipX && !layer.flipY) continue
     const flipActive = (!layer.flipX || flipX) && (!layer.flipY || flipY)
-    if (flipActive) suppressedByFlip.add(getBaseFlipPath(layer))
+    if (flipActive) suppressedByFlip.add(layer.basePath)
   }
 
   const sequence: RenderItem[] = []
@@ -139,7 +119,7 @@ function buildRenderSequence(
 
     // Radio (*): at most one per parent group
     if (layer.isRadio) {
-      const parentGroup = layer.path.split('/').slice(0, -1).join('/')
+      const parentGroup = layer.parentPath
       if (radioShownGroups.has(parentGroup)) continue
       radioShownGroups.add(parentGroup)
     }
@@ -229,7 +209,7 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
     if (!psd) return
     resolvedRef.current = buildRenderSequence(
       psd, props.mouth, props.eye, props.layerVisibility,
-      props.flipX ?? false, props.flipY ?? false,
+      props.flipX, props.flipY,
     )
 
     const canvas = canvasRef.current
@@ -279,9 +259,9 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
         frame++
         let next: number
         if (frame <= blinkSpeed) {
-          next = Math.min(4, Math.round((frame / blinkSpeed) * 4))
+          next = Math.min(MAX_FRAME, Math.round((frame / blinkSpeed) * MAX_FRAME))
         } else {
-          next = Math.max(0, Math.round(((totalFrames - frame) / blinkSpeed) * 4))
+          next = Math.max(0, Math.round(((totalFrames - frame) / blinkSpeed) * MAX_FRAME))
         }
 
         if (eyeFrameRef.current !== next) {
@@ -301,7 +281,7 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
     }
 
     const scheduleNext = (): void => {
-      const jitter = (Math.random() - 0.5) * blinkInterval * 0.4
+      const jitter = (Math.random() - 0.5) * blinkInterval * BLINK_JITTER_RATIO
       blinkTimer = setTimeout(doBlink, (blinkInterval + jitter) * 1000)
     }
     scheduleNext()
@@ -326,7 +306,7 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
   // Test speak via postMessage
   useEffect(() => {
     const handler = (e: MessageEvent) => {
-      if (e.data?.type === 'nicomview:test-speak') {
+      if (e.data?.type === PLUGIN_MESSAGE.testSpeak) {
         const text = e.data.text as string
         if (text) ttsQueueRef.current?.enqueue(text)
       }

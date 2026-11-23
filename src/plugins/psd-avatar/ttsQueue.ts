@@ -1,7 +1,6 @@
+import { TTS_MAX_QUEUE_SIZE } from '../../shared/constants'
 import { synthesize } from './voicevoxClient'
 import { LipSync } from './lipSync'
-
-const MAX_QUEUE_SIZE = 30
 
 export interface TtsQueueOptions {
   host: string
@@ -32,7 +31,7 @@ export class TtsQueue {
   }
 
   enqueue(text: string): void {
-    if (this.queue.length >= MAX_QUEUE_SIZE) return
+    if (this.queue.length >= TTS_MAX_QUEUE_SIZE) return
     this.queue.push(text)
     this.processNext()
   }

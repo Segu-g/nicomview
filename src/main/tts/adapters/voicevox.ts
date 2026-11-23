@@ -3,6 +3,7 @@ import path from 'path'
 import os from 'os'
 import { execFile } from 'child_process'
 import type { TtsAdapterParamDef } from '../../../shared/types'
+import { PORT_RANGE, VOICEVOX_DEFAULTS } from '../../../shared/constants'
 import type { TtsAdapter } from '../types'
 
 interface VoicevoxStyle {
@@ -18,7 +19,7 @@ interface VoicevoxSpeaker {
 export class VoicevoxAdapter implements TtsAdapter {
   readonly id = 'voicevox'
   readonly name = 'VOICEVOX'
-  readonly defaultSettings = { host: 'localhost', port: 50021, speakerId: 0 }
+  readonly defaultSettings = { ...VOICEVOX_DEFAULTS }
 
   private host: string
   private port: number
@@ -42,16 +43,14 @@ export class VoicevoxAdapter implements TtsAdapter {
         key: 'host',
         label: 'ホスト',
         type: 'string',
-        defaultValue: 'localhost'
+        defaultValue: this.defaultSettings.host
       },
       {
         key: 'port',
         label: 'ポート',
         type: 'number',
-        defaultValue: 50021,
-        min: 1,
-        max: 65535,
-        step: 1
+        defaultValue: this.defaultSettings.port,
+        ...PORT_RANGE
       }
     ]
 
@@ -60,7 +59,7 @@ export class VoicevoxAdapter implements TtsAdapter {
       key: 'speakerId',
       label: 'キャラクター',
       type: 'select',
-      defaultValue: 0,
+      defaultValue: this.defaultSettings.speakerId,
       options: []
     }
 

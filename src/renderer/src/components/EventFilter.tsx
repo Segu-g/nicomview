@@ -1,5 +1,5 @@
 import { FormGroup, FormControlLabel, Checkbox } from '@mui/material'
-import type { PluginPreferences } from '../../../shared/types'
+import type { CommentEventType, PluginPreferences } from '../../../shared/types'
 import { ALL_EVENT_TYPES } from '../../../shared/types'
 import { EVENT_LABELS } from '../utils/eventLabels'
 

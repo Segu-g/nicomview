@@ -2,6 +2,10 @@ import { readPsd, Layer } from 'ag-psd'
 
 export interface PsdLayer {
   path: string
+  /** 親グループのパス（ルート直下は空文字） */
+  parentPath: string
+  /** :flip 接尾辞を除いたパス */
+  basePath: string
   name: string
   canvas: HTMLCanvasElement | null
   left: number
@@ -21,7 +25,14 @@ export interface PsdData {
   layers: PsdLayer[]
 }
 
-function parseName(raw: string): {
+/** PSDTool の反転レイヤー接尾辞 */
+const FLIP_SUFFIXES = [
+  { suffix: ':flipxy', flipX: true, flipY: true },
+  { suffix: ':flipx', flipX: true, flipY: false },
+  { suffix: ':flipy', flipX: false, flipY: true },
+]
+
+export function parseName(raw: string): {
   name: string
   pathName: string
   forceVisible: boolean
@@ -45,16 +56,11 @@ function parseName(raw: string): {
 
   // pathName keeps flip suffix (for unique path), name strips it (for display)
   const pathName = name
-  if (name.endsWith(':flipxy')) {
-    flipX = true
-    flipY = true
-    name = name.slice(0, -7)
-  } else if (name.endsWith(':flipx')) {
-    flipX = true
-    name = name.slice(0, -6)
-  } else if (name.endsWith(':flipy')) {
-    flipY = true
-    name = name.slice(0, -6)
+  const flip = FLIP_SUFFIXES.find(({ suffix }) => name.endsWith(suffix))
+  if (flip) {
+    flipX = flip.flipX
+    flipY = flip.flipY
+    name = name.slice(0, -flip.suffix.length)
   }
 
   return { name, pathName, forceVisible, isRadio, flipX, flipY }
@@ -72,6 +78,8 @@ function flattenLayers(layers: Layer[], parentPath: string, parentHidden: boolea
 
     result.push({
       path,
+      parentPath,
+      basePath: parentPath ? `${parentPath}/${name}` : name,
       name,
       canvas: layer.canvas ?? null,
       left: layer.left ?? 0,

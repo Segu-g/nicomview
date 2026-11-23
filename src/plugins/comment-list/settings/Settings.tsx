@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import type { PluginSettings, PluginSettingsMessage } from '../../../shared/types'
+import { PLUGIN_MESSAGE } from '../../../shared/pluginMessages'
 
 const DEFAULTS = { fontSize: 28, theme: 'dark', direction: 'bottom' }
 
@@ -16,7 +17,7 @@ export function Settings({ pluginId }: Props) {
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       const msg = e.data as PluginSettingsMessage
-      if (msg?.type === 'nicomview:settings-init') {
+      if (msg?.type === PLUGIN_MESSAGE.settingsInit) {
         const s = msg.settings
         setFontSize(String(s.fontSize ?? DEFAULTS.fontSize))
         setTheme(String(s.theme ?? DEFAULTS.theme))
@@ -25,14 +26,14 @@ export function Settings({ pluginId }: Props) {
       }
     }
     window.addEventListener('message', handler)
-    window.parent.postMessage({ type: 'nicomview:ready', pluginId }, '*')
+    window.parent.postMessage({ type: PLUGIN_MESSAGE.ready, pluginId }, '*')
     return () => window.removeEventListener('message', handler)
   }, [pluginId])
 
   const sendUpdate = useCallback(
     (settings: PluginSettings) => {
       window.parent.postMessage(
-        { type: 'nicomview:settings-update', pluginId, settings },
+        { type: PLUGIN_MESSAGE.settingsUpdate, pluginId, settings },
         '*'
       )
     },

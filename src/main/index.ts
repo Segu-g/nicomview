@@ -13,6 +13,8 @@ import { TtsManager } from './tts/ttsManager'
 import { VoicevoxAdapter } from './tts/adapters/voicevox'
 import { BouyomichanAdapter } from './tts/adapters/bouyomichan'
 import type { CommentEventType, PluginPreferences, PluginSettings, TtsSettings } from '../shared/types'
+import { HTTP_PORT, WS_PORT } from '../shared/constants'
+import { IPC } from '../shared/ipc'
 
 let mainWindow: BrowserWindow | null = null
 let server: CommentServer | null = null
@@ -59,8 +61,8 @@ async function createWindow(): Promise<void> {
   // Express + WebSocket サーバー起動
   try {
     server = await createServer({
-      httpPort: 3939,
-      wsPort: 3940
+      httpPort: HTTP_PORT,
+      wsPort: WS_PORT
     })
 
     // プラグインルート登録
@@ -91,56 +93,56 @@ async function createWindow(): Promise<void> {
       server?.broadcast(event, data)
       ttsManager?.handleEvent(event as CommentEventType, data)
     },
-    (state) => mainWindow?.webContents.send('state-change', state)
+    (state) => mainWindow?.webContents.send(IPC.stateChange, state)
   )
 
   // IPC ハンドラ
-  ipcMain.handle('connect', async (_event, liveId: string, cookies?: string) => {
+  ipcMain.handle(IPC.connect, async (_event, liveId: string, cookies?: string) => {
     server?.clearHistory()
     await commentManager?.connect(liveId, cookies)
   })
 
-  ipcMain.handle('disconnect', async () => {
+  ipcMain.handle(IPC.disconnect, async () => {
     commentManager?.disconnect()
   })
 
-  ipcMain.handle('get-plugins', () => {
+  ipcMain.handle(IPC.getPlugins, () => {
     return pluginManager?.getPlugins() ?? []
   })
 
-  ipcMain.handle('get-plugin-preferences', () => {
+  ipcMain.handle(IPC.getPluginPreferences, () => {
     return pluginManager?.getPreferences() ?? null
   })
 
-  ipcMain.handle('set-plugin-preferences', (_event, prefs: Partial<PluginPreferences>) => {
+  ipcMain.handle(IPC.setPluginPreferences, (_event, prefs: Partial<PluginPreferences>) => {
     pluginManager?.setPreferences(prefs)
   })
 
-  ipcMain.handle('get-plugin-settings', (_event, pluginId: string) => {
+  ipcMain.handle(IPC.getPluginSettings, (_event, pluginId: string) => {
     return pluginManager?.getPluginSettings(pluginId) ?? {}
   })
 
-  ipcMain.handle('set-plugin-settings', (_event, pluginId: string, settings: PluginSettings) => {
+  ipcMain.handle(IPC.setPluginSettings, (_event, pluginId: string, settings: PluginSettings) => {
     pluginManager?.setPluginSettings(pluginId, settings)
   })
 
-  ipcMain.handle('get-tts-settings', () => {
+  ipcMain.handle(IPC.getTtsSettings, () => {
     return ttsManager?.getSettings() ?? null
   })
 
-  ipcMain.handle('set-tts-settings', (_event, settings: Partial<TtsSettings>) => {
+  ipcMain.handle(IPC.setTtsSettings, (_event, settings: Partial<TtsSettings>) => {
     ttsManager?.setSettings(settings)
   })
 
-  ipcMain.handle('get-tts-adapters', () => {
+  ipcMain.handle(IPC.getTtsAdapters, () => {
     return ttsManager?.getAdapterInfos() ?? []
   })
 
-  ipcMain.handle('get-tts-adapter-params', async (_event, adapterId: string) => {
+  ipcMain.handle(IPC.getTtsAdapterParams, async (_event, adapterId: string) => {
     return (await ttsManager?.getAdapterParams(adapterId)) ?? []
   })
 
-  ipcMain.handle('open-plugin-folder', () => {
+  ipcMain.handle(IPC.openPluginFolder, () => {
     shell.openPath(getPluginsPath())
   })
 

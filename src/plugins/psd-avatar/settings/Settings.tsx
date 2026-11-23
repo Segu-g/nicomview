@@ -3,30 +3,14 @@ import Checkbox from '@mui/material/Checkbox'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked'
 import type { PluginSettings, PluginSettingsMessage } from '../../../shared/types'
+import { pluginFileUrl, pluginOverlayUrl } from '../../../shared/constants'
+import { PLUGIN_MESSAGE } from '../../../shared/pluginMessages'
 import { loadPsd, type PsdData, type PsdLayer } from '../psdLoader'
 import { fetchSpeakers, type VoicevoxSpeaker } from '../voicevoxClient'
-
-const DEFAULTS: Record<string, string | number> = {
-  psdFile: 'models/default.psd',
-  voicevoxHost: 'http://localhost:50021',
-  speaker: 0,
-  speed: 1.0,
-  volume: 1.0,
-  threshold: 0.15,
-  sensitivity: 8,
-  mouthTransitionFrames: 4,
-  blinkInterval: 3,
-  blinkSpeed: 6,
-  mouth0: '', mouth1: '', mouth2: '', mouth3: '', mouth4: '',
-  eye0: '', eye1: '', eye2: '', eye3: '', eye4: '',
-  layerVisibility: '{}',
-  flipX: 0,
-  flipY: 0,
-}
-
-const MOUTH_KEYS = ['mouth0', 'mouth1', 'mouth2', 'mouth3', 'mouth4'] as const
-const EYE_KEYS = ['eye0', 'eye1', 'eye2', 'eye3', 'eye4'] as const
-const ALL_ROLE_KEYS = [...MOUTH_KEYS, ...EYE_KEYS]
+import {
+  ALL_ROLE_KEYS, DEFAULTS, PLUGIN_ID, RANGES,
+  parseLayerPaths, parseLayerVisibility, type RawSettings,
+} from '../config'
 
 const ROLE_LABELS: Record<string, string> = {
   mouth0: '口: 閉じ',
@@ -40,8 +24,6 @@ const ROLE_LABELS: Record<string, string> = {
   eye3: '目: ほぼ閉じ',
   eye4: '目: 閉じ',
 }
-
-const OVERLAY_BASE = 'http://localhost:3939/plugins/psd-avatar/overlay/'
 
 interface Props {
   pluginId: string
@@ -63,24 +45,7 @@ function isAncestorCollapsed(path: string, collapsed: Set<string>): boolean {
   return false
 }
 
-function parseVisibility(settings: Record<string, string | number>): Record<string, boolean> {
-  try {
-    const raw = settings.layerVisibility
-    if (typeof raw === 'string' && raw) return JSON.parse(raw)
-  } catch { /* ignore */ }
-  return {}
-}
-
-function parseLayerPaths(value: string | number): string[] {
-  const str = String(value ?? '')
-  if (!str) return []
-  if (str.startsWith('[')) {
-    try { return JSON.parse(str) as string[] } catch { /* fall through */ }
-  }
-  return [str] // backward compat: plain path string
-}
-
-function buildRoleMap(settings: Record<string, string | number>): Record<string, string[]> {
+function buildRoleMap(settings: RawSettings): Record<string, string[]> {
   const map: Record<string, string[]> = {}
   for (const key of ALL_ROLE_KEYS) {
     for (const path of parseLayerPaths(settings[key] ?? '')) {
@@ -91,18 +56,12 @@ function buildRoleMap(settings: Record<string, string | number>): Record<string,
   return map
 }
 
-function buildPreviewUrl(settings: Record<string, string | number>, animate: boolean): string {
-  const params = new URLSearchParams()
-  for (const [key, value] of Object.entries(settings)) {
-    if (value !== '' && value != null) params.set(key, String(value))
-  }
-  if (!animate) params.set('preview', 'true')
-  const qs = params.toString()
-  return qs ? `${OVERLAY_BASE}?${qs}` : OVERLAY_BASE
+function buildPreviewUrl(settings: RawSettings, animate: boolean): string {
+  return pluginOverlayUrl(PLUGIN_ID, animate ? settings : { ...settings, preview: 'true' })
 }
 
 export function Settings({ pluginId }: Props) {
-  const [settings, setSettings] = useState<Record<string, string | number>>(DEFAULTS)
+  const [settings, setSettings] = useState<RawSettings>(DEFAULTS)
   const [ready, setReady] = useState(false)
   const [psd, setPsd] = useState<PsdData | null>(null)
   const [psdError, setPsdError] = useState<string | null>(null)
@@ -117,9 +76,9 @@ export function Settings({ pluginId }: Props) {
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       const msg = e.data as PluginSettingsMessage
-      if (msg?.type === 'nicomview:settings-init') {
+      if (msg?.type === PLUGIN_MESSAGE.settingsInit) {
         const s = msg.settings
-        const merged: Record<string, string | number> = { ...DEFAULTS }
+        const merged: RawSettings = { ...DEFAULTS }
         for (const [key, value] of Object.entries(s)) {
           if (value !== '' && value != null) {
             merged[key] = value as string | number
@@ -130,18 +89,18 @@ export function Settings({ pluginId }: Props) {
       }
     }
     window.addEventListener('message', handler)
-    ;(window.opener || window.parent).postMessage({ type: 'nicomview:ready', pluginId }, '*')
+    ;(window.opener || window.parent).postMessage({ type: PLUGIN_MESSAGE.ready, pluginId }, '*')
     return () => window.removeEventListener('message', handler)
   }, [pluginId])
 
   const sendUpdate = useCallback(
-    (updated: Record<string, string | number>) => {
+    (updated: RawSettings) => {
       const ps: PluginSettings = {}
       for (const [key, value] of Object.entries(updated)) {
         ps[key] = value
       }
       ;(window.opener || window.parent).postMessage(
-        { type: 'nicomview:settings-update', pluginId, settings: ps },
+        { type: PLUGIN_MESSAGE.settingsUpdate, pluginId, settings: ps },
         '*'
       )
     },
@@ -160,7 +119,7 @@ export function Settings({ pluginId }: Props) {
   )
 
   const updateMultiple = useCallback(
-    (updates: Record<string, string | number>) => {
+    (updates: RawSettings) => {
       setSettings((prev) => {
         const next = { ...prev, ...updates }
         sendUpdate(next)
@@ -175,7 +134,7 @@ export function Settings({ pluginId }: Props) {
     setPsdError(null)
     try {
       const psdFile = String(settings.psdFile)
-      const url = `http://localhost:3939/plugins/psd-avatar/${psdFile}`
+      const url = pluginFileUrl(PLUGIN_ID, psdFile)
       const data = await loadPsd(url)
       setPsd(data)
     } catch (e) {
@@ -202,16 +161,13 @@ export function Settings({ pluginId }: Props) {
   const handleTestSpeak = useCallback(() => {
     if (!testText.trim()) return
     previewRef.current?.contentWindow?.postMessage(
-      { type: 'nicomview:test-speak', text: testText.trim() },
+      { type: PLUGIN_MESSAGE.testSpeak, text: testText.trim() },
       '*'
     )
   }, [testText])
 
-  const visibility = useMemo(() => parseVisibility(settings), [settings.layerVisibility])
-  const roleMap = useMemo(() => buildRoleMap(settings), [
-    settings.mouth0, settings.mouth1, settings.mouth2, settings.mouth3, settings.mouth4,
-    settings.eye0, settings.eye1, settings.eye2, settings.eye3, settings.eye4,
-  ])
+  const visibility = useMemo(() => parseLayerVisibility(settings.layerVisibility), [settings.layerVisibility])
+  const roleMap = useMemo(() => buildRoleMap(settings), ALL_ROLE_KEYS.map((key) => settings[key]))
   const previewUrl = useMemo(() => buildPreviewUrl(settings, previewAnimate), [settings, previewAnimate])
 
   const handleVisibilityToggle = useCallback(
@@ -220,12 +176,10 @@ export function Settings({ pluginId }: Props) {
       const current = layer.path in visibility ? visibility[layer.path] : !layer.hidden
       if (layer.isRadio && !current) {
         // Turning on a radio leaf: turn off sibling radio leaves in same parent group
-        const parentPath = layer.path.split('/').slice(0, -1).join('/') || '__root__'
         const next = { ...visibility, [layer.path]: true }
         for (const other of (psd?.layers ?? [])) {
           if (other.path === layer.path || other.isGroup || !other.isRadio) continue
-          const otherParent = other.path.split('/').slice(0, -1).join('/') || '__root__'
-          if (otherParent === parentPath) next[other.path] = false
+          if (other.parentPath === layer.parentPath) next[other.path] = false
         }
         update('layerVisibility', JSON.stringify(next))
       } else {
@@ -241,13 +195,11 @@ export function Settings({ pluginId }: Props) {
       const current = layer.path in visibility ? visibility[layer.path] : !layer.hidden
       if (layer.isRadio) {
         // Radio group: turning on deselects sibling radio groups
-        const parentPath = layer.path.split('/').slice(0, -1).join('/') || '__root__'
         const next = { ...visibility, [layer.path]: !current }
         if (!current) {
           for (const other of (psd?.layers ?? [])) {
             if (other.path === layer.path || !other.isGroup || !other.isRadio) continue
-            const otherParent = other.path.split('/').slice(0, -1).join('/') || '__root__'
-            if (otherParent === parentPath) next[other.path] = false
+            if (other.parentPath === layer.parentPath) next[other.path] = false
           }
         }
         update('layerVisibility', JSON.stringify(next))
@@ -325,7 +277,6 @@ export function Settings({ pluginId }: Props) {
               {psd.layers.map((l) => {
                 if (isAncestorCollapsed(l.path, collapsedGroups)) return null
                 const depth = l.path.split('/').length - 1
-                const parentPath = l.path.split('/').slice(0, -1).join('/') || '__root__'
 
                 if (l.isGroup) {
                   const collapsed = collapsedGroups.has(l.path)
@@ -493,9 +444,7 @@ export function Settings({ pluginId }: Props) {
           速度
           <input
             type="number"
-            min={0.5}
-            max={2.0}
-            step={0.1}
+            {...RANGES.speed}
             value={settings.speed}
             onChange={(e) => update('speed', Number(e.target.value))}
           />
@@ -504,9 +453,7 @@ export function Settings({ pluginId }: Props) {
           音量
           <input
             type="number"
-            min={0}
-            max={2.0}
-            step={0.1}
+            {...RANGES.volume}
             value={settings.volume}
             onChange={(e) => update('volume', Number(e.target.value))}
           />
@@ -520,9 +467,7 @@ export function Settings({ pluginId }: Props) {
           しきい値 (0〜1)
           <input
             type="number"
-            min={0}
-            max={1}
-            step={0.01}
+            {...RANGES.threshold}
             value={settings.threshold}
             onChange={(e) => update('threshold', Number(e.target.value))}
           />
@@ -531,9 +476,7 @@ export function Settings({ pluginId }: Props) {
           閉口遅延（フレーム数）
           <input
             type="number"
-            min={1}
-            max={60}
-            step={1}
+            {...RANGES.sensitivity}
             value={settings.sensitivity}
             onChange={(e) => update('sensitivity', Number(e.target.value))}
           />
@@ -542,9 +485,7 @@ export function Settings({ pluginId }: Props) {
           口パク速度（遷移フレーム数）
           <input
             type="number"
-            min={1}
-            max={30}
-            step={1}
+            {...RANGES.mouthTransitionFrames}
             value={settings.mouthTransitionFrames}
             onChange={(e) => update('mouthTransitionFrames', Number(e.target.value))}
           />
@@ -579,9 +520,7 @@ export function Settings({ pluginId }: Props) {
           目パチ間隔（秒）
           <input
             type="number"
-            min={0.5}
-            max={10}
-            step={0.5}
+            {...RANGES.blinkInterval}
             value={settings.blinkInterval}
             onChange={(e) => update('blinkInterval', Number(e.target.value))}
           />
@@ -590,9 +529,7 @@ export function Settings({ pluginId }: Props) {
           目パチ速度（遷移フレーム数）
           <input
             type="number"
-            min={1}
-            max={30}
-            step={1}
+            {...RANGES.blinkSpeed}
             value={settings.blinkSpeed}
             onChange={(e) => update('blinkSpeed', Number(e.target.value))}
           />

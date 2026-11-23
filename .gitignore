@@ -8,4 +8,3 @@ Thumbs.db
 resources/plugins/
 playwright-report/
 test-results/
-.ssh/

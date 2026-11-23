@@ -156,18 +156,18 @@ describe('TtsManager', () => {
     manager.registerAdapter(adapter)
     manager.setSettings({ adapterId: 'mock' })
 
-    manager.setSettings({ adapterSettings: { host: '192.168.1.1', port: 8080 } })
+    manager.setSettings({ adapterSettings: { mock: { host: '192.168.1.1', port: 8080 } } })
 
     expect(adapter.updateSettings).toHaveBeenCalledWith({ host: '192.168.1.1', port: 8080 })
   })
 
   it('registerAdapter 時に保存済み adapterSettings がアダプターに反映される', () => {
-    manager.setSettings({ adapterId: 'mock', adapterSettings: { host: '10.0.0.1' } })
+    manager.setSettings({ adapterId: 'mock', adapterSettings: { mock: { host: '10.0.0.1' } } })
 
     const adapter = createMockAdapter()
     manager.registerAdapter(adapter)
 
-    expect(adapter.updateSettings).toHaveBeenCalledWith({ host: '10.0.0.1' })
+    expect(adapter.updateSettings).toHaveBeenCalledWith({ host: '10.0.0.1', port: 50021 })
   })
 
   it('setSettings で adapterId を変更するとアダプターが切り替わる', async () => {
@@ -241,21 +241,21 @@ describe('TtsManager', () => {
   })
 
   it('setSettings で speakerOverrides を変更して永続化できる', () => {
-    manager.setSettings({ speakerOverrides: { comment: 3, gift: 5 } })
+    manager.setSettings({ speakerOverrides: { mock: { comment: 3, gift: 5 } } })
 
     const settings = manager.getSettings()
-    expect(settings.speakerOverrides).toEqual({ comment: 3, gift: 5 })
+    expect(settings.speakerOverrides).toEqual({ mock: { comment: 3, gift: 5 } })
 
     const saved = JSON.parse(fs.readFileSync(path.join(tmpDir, 'tts-settings.json'), 'utf-8'))
-    expect(saved.speakerOverrides).toEqual({ comment: 3, gift: 5 })
+    expect(saved.speakerOverrides).toEqual({ mock: { comment: 3, gift: 5 } })
   })
 
   it('speakerOverrides が設定ファイルから復元される', () => {
-    manager.setSettings({ speakerOverrides: { emotion: 7 } })
+    manager.setSettings({ speakerOverrides: { mock: { emotion: 7 } } })
 
     const manager2 = new TtsManager(tmpDir)
     const settings = manager2.getSettings()
-    expect(settings.speakerOverrides).toEqual({ emotion: 7 })
+    expect(settings.speakerOverrides).toEqual({ mock: { emotion: 7 } })
     manager2.dispose()
   })
 
@@ -265,7 +265,7 @@ describe('TtsManager', () => {
     manager.setSettings({
       enabled: true,
       adapterId: 'mock',
-      speakerOverrides: { comment: 10 }
+      speakerOverrides: { mock: { comment: 10 } }
     })
 
     manager.handleEvent('comment', { content: 'テスト' })
@@ -281,7 +281,7 @@ describe('TtsManager', () => {
     manager.setSettings({
       enabled: true,
       adapterId: 'mock',
-      speakerOverrides: { gift: 5 }
+      speakerOverrides: { mock: { gift: 5 } }
     })
 
     manager.handleEvent('comment', { content: 'テスト' })
@@ -289,5 +289,28 @@ describe('TtsManager', () => {
     await vi.waitFor(() => {
       expect(adapter.speak).toHaveBeenCalledWith('テスト', 1, 1, undefined)
     })
+  })
+
+  it('エンジンごとの設定と話者上書きが混ざらない', async () => {
+    const a = createMockAdapter('a', 'A')
+    const b = createMockAdapter('b', 'B')
+    manager.registerAdapter(a)
+    manager.registerAdapter(b)
+    manager.setSettings({
+      enabled: true,
+      adapterId: 'a',
+      adapterSettings: { a: { port: 1 } },
+      speakerOverrides: { a: { comment: 10 } }
+    })
+    expect(a.updateSettings).toHaveBeenLastCalledWith({ host: 'localhost', port: 1 })
+    expect(b.updateSettings).toHaveBeenLastCalledWith({ host: 'localhost', port: 50021 })
+
+    manager.setSettings({ adapterId: 'b' })
+    manager.handleEvent('comment', { content: 'B' })
+    await vi.waitFor(() => expect(b.speak).toHaveBeenCalledWith('B', 1, 1, undefined))
+
+    manager.setSettings({ adapterId: 'a' })
+    manager.handleEvent('comment', { content: 'A' })
+    await vi.waitFor(() => expect(a.speak).toHaveBeenCalledWith('A', 1, 1, 10))
   })
 })

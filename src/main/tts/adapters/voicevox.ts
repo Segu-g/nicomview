@@ -57,6 +57,7 @@ export class VoicevoxAdapter implements TtsAdapter {
     // キャラクター（話者）一覧を動的に取得
     const speakerDef: TtsAdapterParamDef = {
       key: 'speakerId',
+      role: 'speaker',
       label: 'キャラクター',
       type: 'select',
       defaultValue: this.defaultSettings.speakerId,

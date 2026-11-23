@@ -23,8 +23,8 @@ export class TtsManager {
 
   registerAdapter(adapter: TtsAdapter): void {
     this.adapters.set(adapter.id, adapter)
+    this.applyAdapterSettings(adapter)
     if (this.settings.adapterId === adapter.id) {
-      adapter.updateSettings(this.settings.adapterSettings)
       this.queue.setAdapter(adapter)
     }
   }
@@ -38,7 +38,7 @@ export class TtsManager {
     const text = formatTtsText(template, data as Record<string, unknown>)
     if (!text) return
 
-    const speakerOverride = this.settings.speakerOverrides[eventType]
+    const speakerOverride = this.settings.speakerOverrides[this.settings.adapterId]?.[eventType]
     this.queue.enqueue(text, speakerOverride)
   }
 
@@ -66,8 +66,7 @@ export class TtsManager {
     }
     if (partial.adapterSettings !== undefined) {
       this.settings.adapterSettings = { ...partial.adapterSettings }
-      const currentAdapter = this.adapters.get(this.settings.adapterId)
-      currentAdapter?.updateSettings(this.settings.adapterSettings)
+      for (const adapter of this.adapters.values()) this.applyAdapterSettings(adapter)
     }
     if (partial.formatTemplates !== undefined) {
       this.settings.formatTemplates = { ...DEFAULT_TTS_TEMPLATES, ...partial.formatTemplates }
@@ -101,6 +100,10 @@ export class TtsManager {
     }
   }
 
+  private applyAdapterSettings(adapter: TtsAdapter): void {
+    adapter.updateSettings({ ...adapter.defaultSettings, ...this.settings.adapterSettings[adapter.id] })
+  }
+
   private loadSettings(): TtsSettings {
     const defaults: TtsSettings = {
       enabled: false,
@@ -127,7 +130,7 @@ export class TtsManager {
       volume: typeof r.volume === 'number' ? r.volume : defaults.volume,
       adapterSettings:
         typeof r.adapterSettings === 'object' && r.adapterSettings !== null
-          ? r.adapterSettings as Record<string, string | number | boolean>
+          ? r.adapterSettings as TtsSettings['adapterSettings']
           : defaults.adapterSettings,
       formatTemplates:
         typeof r.formatTemplates === 'object' && r.formatTemplates !== null

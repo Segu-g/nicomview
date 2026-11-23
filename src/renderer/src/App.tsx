@@ -107,6 +107,7 @@ function App(): JSX.Element {
   const [ttsSettings, setTtsSettings] = useState<TtsSettings | null>(null)
   const [ttsAdapters, setTtsAdapters] = useState<TtsAdapterInfo[]>([])
   const [ttsParamDefs, setTtsParamDefs] = useState<TtsAdapterParamDef[]>([])
+  const paramsAdapterRef = useRef('')
   const [saveError, setSaveError] = useState<string | null>(null)
   const [showEngineSettings, setShowEngineSettings] = useState(true)
   const [showEventSettings, setShowEventSettings] = useState(false)
@@ -140,7 +141,11 @@ function App(): JSX.Element {
 
       // 保存済みアダプターのパラメーター定義を読み込む
       if (loadedTts.adapterId) {
-        window.commentViewerAPI.getTtsAdapterParams(loadedTts.adapterId).then(setTtsParamDefs)
+        const loadedId = loadedTts.adapterId
+        paramsAdapterRef.current = loadedId
+        window.commentViewerAPI.getTtsAdapterParams(loadedId).then((defs) => {
+          if (paramsAdapterRef.current === loadedId) setTtsParamDefs(defs)
+        })
       }
     })
   }, [])
@@ -211,32 +216,48 @@ function App(): JSX.Element {
     async (partial: Partial<TtsSettings>) => {
       if (!ttsSettings) return
       const prev = ttsSettings
+      const prevParamDefs = ttsParamDefs
       const updated = { ...ttsSettings, ...partial }
       setTtsSettings(updated)
+      // 旧エンジンの項目を新エンジンの設定として編集させない
+      if (partial.adapterId !== undefined) {
+        paramsAdapterRef.current = partial.adapterId
+        setTtsParamDefs([])
+      }
       try {
         await window.commentViewerAPI.setTtsSettings(partial)
-        // アダプター変更時はパラメーター定義を再取得
-        if (partial.adapterId !== undefined) {
-          if (partial.adapterId) {
-            const defs = await window.commentViewerAPI.getTtsAdapterParams(partial.adapterId)
-            setTtsParamDefs(defs)
-          } else {
-            setTtsParamDefs([])
-          }
+        if (partial.adapterId) {
+          const defs = await window.commentViewerAPI.getTtsAdapterParams(partial.adapterId)
+          if (paramsAdapterRef.current === partial.adapterId) setTtsParamDefs(defs)
         }
       } catch {
         setTtsSettings(prev)
+        if (partial.adapterId !== undefined) {
+          paramsAdapterRef.current = prev.adapterId
+          setTtsParamDefs(prevParamDefs)
+        }
         setSaveError('読み上げ設定の保存に失敗しました')
       }
     },
-    [ttsSettings]
+    [ttsSettings, ttsParamDefs]
   )
 
   const toggleExpanded = useCallback((pluginId: string) => {
     setExpandedPlugin((prev) => (prev === pluginId ? null : pluginId))
   }, [])
 
-  const speakerOptions = ttsParamDefs.find((p) => p.key === 'speakerId')?.options ?? []
+  const speakerParam = ttsParamDefs.find((p) => p.role === 'speaker')
+  const speakerOptions = speakerParam?.options ?? []
+  const adapterId = ttsSettings?.adapterId ?? ''
+  const adapterSettings = ttsSettings?.adapterSettings[adapterId] ?? {}
+  const speakerOverrides = ttsSettings?.speakerOverrides[adapterId] ?? {}
+
+  const handleAdapterSettingChange = (key: string, value: string | number | boolean): void => {
+    if (!ttsSettings) return
+    handleTtsChange({
+      adapterSettings: { ...ttsSettings.adapterSettings, [adapterId]: { ...adapterSettings, [key]: value } }
+    })
+  }
 
   const isConnected = connectionState === 'connected'
   const isConnecting = connectionState === 'connecting'
@@ -466,7 +487,7 @@ function App(): JSX.Element {
               {ttsParamDefs.length > 0 && (
                 <Box sx={{ mb: 2 }}>
                   {ttsParamDefs.map((param) => {
-                    const value = ttsSettings.adapterSettings[param.key] ?? param.defaultValue
+                    const value = adapterSettings[param.key] ?? param.defaultValue
                     if (param.type === 'select') {
                       return (
                         <Box key={param.key} sx={{ mb: 1 }}>
@@ -479,9 +500,7 @@ function App(): JSX.Element {
                               size="small"
                               value={value}
                               onChange={(e) => {
-                                handleTtsChange({
-                                  adapterSettings: { ...ttsSettings.adapterSettings, [param.key]: e.target.value }
-                                })
+                                handleAdapterSettingChange(param.key, e.target.value)
                               }}
                             >
                               {param.options!.map((opt) => (
@@ -509,9 +528,7 @@ function App(): JSX.Element {
                             value={value}
                             inputProps={{ min: param.min, max: param.max, step: param.step }}
                             onChange={(e) => {
-                              handleTtsChange({
-                                adapterSettings: { ...ttsSettings.adapterSettings, [param.key]: Number(e.target.value) }
-                              })
+                              handleAdapterSettingChange(param.key, Number(e.target.value))
                             }}
                           />
                         </Box>
@@ -526,9 +543,7 @@ function App(): JSX.Element {
                           label={param.label}
                           value={value}
                           onChange={(e) => {
-                            handleTtsChange({
-                              adapterSettings: { ...ttsSettings.adapterSettings, [param.key]: e.target.value }
-                            })
+                            handleAdapterSettingChange(param.key, e.target.value)
                           }}
                         />
                       </Box>
@@ -590,21 +605,23 @@ function App(): JSX.Element {
                           {speakerOptions.length > 0 && (
                             <Box sx={{ mb: 1, ml: 4 }}>
                               <Typography variant="caption" color="text.secondary">
-                                {label}キャラクター
+                                {label}{speakerParam?.label}
                               </Typography>
                               <Select
                                 fullWidth
                                 size="small"
-                                value={ttsSettings.speakerOverrides[eventType] ?? ''}
+                                value={speakerOverrides[eventType] ?? ''}
                                 onChange={(e) => {
                                   const val = e.target.value
-                                  const next = { ...ttsSettings.speakerOverrides }
+                                  const next = { ...speakerOverrides }
                                   if (val === '') {
                                     delete next[eventType]
                                   } else {
                                     next[eventType] = isNaN(Number(val)) ? val : Number(val)
                                   }
-                                  handleTtsChange({ speakerOverrides: next })
+                                  handleTtsChange({
+                                    speakerOverrides: { ...ttsSettings.speakerOverrides, [adapterId]: next }
+                                  })
                                 }}
                               >
                                 <MenuItem value="">デフォルト</MenuItem>

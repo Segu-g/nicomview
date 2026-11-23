@@ -122,4 +122,16 @@ describe('TtsQueue', () => {
       expect(adapter.speak).toHaveBeenCalledWith('テスト', 1, 1, undefined)
     })
   })
+
+  it('エンジン切替時、待機中の項目の話者上書きを外す', async () => {
+    let finish = (): void => {}
+    ;(adapter.speak as ReturnType<typeof vi.fn>).mockImplementation(() => new Promise<void>((r) => { finish = r }))
+    queue.enqueue('再生中', 1)
+    queue.enqueue('待機中', 2)
+
+    const next = createMockAdapter()
+    queue.setAdapter(next)
+    finish()
+    await vi.waitFor(() => expect(next.speak).toHaveBeenCalledWith('待機中', 1, 1, undefined))
+  })
 })

@@ -1,9 +1,9 @@
-import type { TtsAdapterParamDef } from '../../shared/types'
+import type { TtsAdapterParamDef, TtsAdapterSettings } from '../../shared/types'
 
 export interface TtsAdapter {
   readonly id: string
   readonly name: string
-  readonly defaultSettings: Record<string, string | number | boolean>
+  readonly defaultSettings: TtsAdapterSettings
 
   /** テキストを読み上げる。キューから1件ずつ呼ばれる */
   speak(text: string, speed: number, volume: number, speakerOverride?: number | string): Promise<void>
@@ -15,7 +15,7 @@ export interface TtsAdapter {
   getParamDefs(): Promise<TtsAdapterParamDef[]>
 
   /** アダプター固有設定を更新する */
-  updateSettings(settings: Record<string, string | number | boolean>): void
+  updateSettings(settings: TtsAdapterSettings): void
 
   /** リソース解放 */
   dispose(): void

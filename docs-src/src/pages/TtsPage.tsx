@@ -34,7 +34,7 @@ export function TtsPage() {
             <tr>
               <td>棒読みちゃん</td>
               <td><code>http://localhost:50080</code></td>
-              <td>RemoteTalk HTTP API 経由</td>
+              <td>RemoteTalk HTTP API 経由・イベント別声質上書き対応</td>
             </tr>
           </tbody>
         </table>

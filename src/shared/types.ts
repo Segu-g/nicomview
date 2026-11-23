@@ -56,21 +56,26 @@ export interface PluginTestSpeakMessage {
   text: string
 }
 
+export type TtsAdapterSettings = Record<string, string | number | boolean>
+export type TtsSpeakerOverrides = Partial<Record<CommentEventType, number | string>>
+
 export interface TtsSettings {
   enabled: boolean
   adapterId: string
   enabledEvents: CommentEventType[]
   speed: number
   volume: number
-  adapterSettings: Record<string, string | number | boolean>
+  /** エンジン ID ごとの固有設定 */
+  adapterSettings: Record<string, TtsAdapterSettings>
   formatTemplates: Record<CommentEventType, string>
-  speakerOverrides: Partial<Record<CommentEventType, number | string>>
+  /** エンジン ID ごとのイベント別話者 */
+  speakerOverrides: Record<string, TtsSpeakerOverrides>
 }
 
 export interface TtsAdapterInfo {
   id: string
   name: string
-  defaultSettings: Record<string, string | number | boolean>
+  defaultSettings: TtsAdapterSettings
 }
 
 export interface TtsAdapterParamOption {
@@ -87,6 +92,8 @@ export interface TtsAdapterParamDef {
   max?: number
   step?: number
   options?: TtsAdapterParamOption[]
+  /** 'speaker' のパラメーターはイベント別に上書きできる */
+  role?: 'speaker'
 }
 
 export interface CommentViewerAPI {

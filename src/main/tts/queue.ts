@@ -14,6 +14,10 @@ export class TtsQueue {
   private volume = 1
 
   setAdapter(adapter: TtsAdapter | null): void {
+    if (this.adapter && adapter !== this.adapter) {
+      // 話者 ID はエンジン固有なので、待機中の項目は新エンジンの既定話者で読む
+      this.queue = this.queue.map(({ text }) => ({ text }))
+    }
     this.adapter = adapter
   }
 

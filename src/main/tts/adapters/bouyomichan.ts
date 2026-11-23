@@ -47,6 +47,7 @@ export class BouyomichanAdapter implements TtsAdapter {
       },
       {
         key: 'voice',
+        role: 'speaker',
         label: '声質',
         type: 'select',
         defaultValue: this.defaultSettings.voice,

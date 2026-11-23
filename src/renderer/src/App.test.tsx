@@ -241,4 +241,65 @@ describe('App', () => {
       ).toBeInTheDocument()
     })
   })
+
+  describe('読み上げエンジンの切替', () => {
+    const voicevoxParams = [
+      { key: 'port', label: 'ポート', type: 'number' as const, defaultValue: 50021 },
+      { key: 'speakerId', role: 'speaker' as const, label: 'キャラクター', type: 'select' as const, defaultValue: 0, options: [{ value: 0, label: 'A' }] }
+    ]
+    const bouyomiParams = [
+      { key: 'port', label: 'ポート', type: 'number' as const, defaultValue: 50080 },
+      { key: 'voice', role: 'speaker' as const, label: '声質', type: 'select' as const, defaultValue: 0, options: [{ value: 1, label: '女性1' }] }
+    ]
+
+    it('エンジンごとの値を表示・保存し、role で話者欄を出す', async () => {
+      const base = await window.commentViewerAPI.getTtsSettings()
+      const api = window.commentViewerAPI
+      api.getTtsSettings = vi.fn().mockResolvedValue({
+        ...base, adapterId: 'voicevox', adapterSettings: { voicevox: { port: 1234 } }
+      })
+      api.getTtsAdapters = vi.fn().mockResolvedValue([
+        { id: 'voicevox', name: 'VOICEVOX', defaultSettings: {} },
+        { id: 'bouyomichan', name: '棒読みちゃん', defaultSettings: {} }
+      ])
+      api.getTtsAdapterParams = vi.fn(async (id: string) => (id === 'voicevox' ? voicevoxParams : bouyomiParams))
+
+      render(<App />)
+      expect(await screen.findByLabelText('ポート')).toHaveValue(1234)
+      expect(screen.getByText('コメントキャラクター')).toBeInTheDocument()
+
+      await userEvent.click(screen.getByText('VOICEVOX'))
+      await userEvent.click(await screen.findByRole('option', { name: '棒読みちゃん' }))
+
+      expect(await screen.findByText('コメント声質')).toBeInTheDocument()
+      const port = screen.getByLabelText('ポート')
+      expect(port).toHaveValue(50080)
+
+      await userEvent.type(port, '1')
+      expect(api.setTtsSettings).toHaveBeenLastCalledWith({
+        adapterSettings: { voicevox: { port: 1234 }, bouyomichan: { port: 500801 } }
+      })
+    })
+
+    it('切替の保存に失敗したら元のエンジンの項目に戻す', async () => {
+      const base = await window.commentViewerAPI.getTtsSettings()
+      const api = window.commentViewerAPI
+      api.getTtsSettings = vi.fn().mockResolvedValue({ ...base, adapterId: 'voicevox' })
+      api.getTtsAdapters = vi.fn().mockResolvedValue([
+        { id: 'voicevox', name: 'VOICEVOX', defaultSettings: {} },
+        { id: 'bouyomichan', name: '棒読みちゃん', defaultSettings: {} }
+      ])
+      api.getTtsAdapterParams = vi.fn().mockResolvedValue(voicevoxParams)
+      api.setTtsSettings = vi.fn().mockRejectedValue(new Error('fail'))
+
+      render(<App />)
+      await screen.findByLabelText('ポート')
+      await userEvent.click(screen.getByText('VOICEVOX'))
+      await userEvent.click(await screen.findByRole('option', { name: '棒読みちゃん' }))
+
+      expect(await screen.findByText('読み上げ設定の保存に失敗しました')).toBeInTheDocument()
+      expect(screen.getByLabelText('ポート')).toHaveValue(50021)
+      expect(screen.getByText('コメントキャラクター')).toBeInTheDocument()
+    })
+  })
 })

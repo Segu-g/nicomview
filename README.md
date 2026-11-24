@@ -229,11 +229,11 @@ src/plugins/
 
 ## リリース
 
-`v*` タグをプッシュすると GitHub Actions が自動でビルド・リリースを作成する。
+`package.json` のバージョンを更新して `main` にマージし、`v*` タグをプッシュすると、GitHub Actions がビルドして下書きリリースを作成する。インストーラーの動作を確認してから、GitHub 上で公開する。
 
 ```bash
-git tag v1.3.0
-git push --tags
+git tag v1.6.0
+git push origin v1.6.0
 ```
 
 ## 動作要件

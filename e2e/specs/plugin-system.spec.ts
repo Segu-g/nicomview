@@ -43,6 +43,8 @@ test.describe('Plugin system', () => {
   test('event filter is saved per plugin and applied to its overlay', async ({ electronApp, mainPage }) => {
     await mainPage.getByTestId('settings-toggle-comment-list').click()
     const settings = mainPage.frameLocator('[data-testid="settings-iframe-comment-list"]')
+    // 展開アニメーション中は iframe が動き、クリックが外れることがある
+    await mainPage.locator('.MuiCollapse-entered [data-testid="settings-iframe-comment-list"]').waitFor()
     for (const name of ['コメント', 'エモーション', '通知', '放送者コメント']) {
       await settings.getByRole('checkbox', { name, exact: true }).uncheck()
     }

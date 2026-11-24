@@ -1,4 +1,4 @@
-import type { CommentEventType } from '../../../shared/types'
+import type { CommentEventType } from './types'
 
 export const EVENT_LABELS: Record<CommentEventType, string> = {
   comment: 'コメント',

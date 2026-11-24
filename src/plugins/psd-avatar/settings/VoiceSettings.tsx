@@ -56,13 +56,13 @@ export function VoiceSettings({ settings, onChange }: Props): JSX.Element {
         <div className="settings-note">
           話者・速度・音量は本体の読み上げとは別に設定されます。本体の読み上げも有効な場合、コメントは両方で読み上げられます。
         </div>
-        {error && <div className="error-text">{error}</div>}
         <TtsParamFields
           params={params}
           values={settings}
           onChange={(param, value) => onChange(param.key, value)}
           onRefresh={load}
         />
+        {error && <div className="error-text">{error}</div>}
         <SpeedVolumeFields
           speed={Number(settings.speed)}
           volume={Number(settings.volume)}

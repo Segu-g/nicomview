@@ -58,19 +58,24 @@ const EVENT_TO_HANDLER: Record<CommentEventType, keyof CommentEventHandlers> = {
   emotion: 'onEmotion',
 }
 
-export function useCommentEvents(handlers: CommentEventHandlers): void {
+export function useCommentEvents(
+  handlers: CommentEventHandlers,
+  /** 受け取るイベント。未指定ならすべて */
+  enabledEvents?: CommentEventType[],
+): void {
   const handleMessage = useCallback(
     (event: string, data: unknown) => {
       if (event === 'clear') {
         handlers.onClear?.()
         return
       }
+      if (enabledEvents && !enabledEvents.includes(event as CommentEventType)) return
       const handlerKey = EVENT_TO_HANDLER[event as CommentEventType]
       if (!handlerKey) return
       const handler = handlers[handlerKey] as ((data: unknown) => void) | undefined
       handler?.(data)
     },
-    [handlers.onComment, handlers.onGift, handlers.onNotification, handlers.onOperatorComment, handlers.onEmotion, handlers.onClear],
+    [handlers.onComment, handlers.onGift, handlers.onNotification, handlers.onOperatorComment, handlers.onEmotion, handlers.onClear, enabledEvents],
   )
 
   useWebSocket(WS_URL, handleMessage)

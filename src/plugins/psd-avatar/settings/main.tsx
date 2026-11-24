@@ -1,10 +1,6 @@
-import { createRoot } from 'react-dom/client'
+import { mountSettings } from '../../settings/mountSettings'
 import { Settings } from './Settings'
+import '../../settings/styles.css'
 import './styles.css'
 
-const params = new URLSearchParams(location.search)
-const pluginId = params.get('pluginId') ?? 'psd-avatar'
-
-createRoot(document.getElementById('root')!).render(
-  <Settings pluginId={pluginId} />
-)
+mountSettings('psd-avatar', Settings)

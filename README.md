@@ -31,7 +31,7 @@
 
 ### イベントフィルタ
 
-表示するイベント種別を設定で選択可能:
+コメントリストと通知カードは、表示するイベント種別をプラグインごとの設定で選択可能（URL の `events` に反映）:
 
 - コメント / ギフト / エモーション / 通知 / 放送者コメント
 
@@ -171,13 +171,13 @@ src/
 │   └── index.ts                  # contextBridge (IPC ブリッジ)
 └── renderer/
     └── src/
-        ├── App.tsx               # 設定 UI（接続・プラグインURL・イベントフィルタ・TTS）
-        ├── main.tsx              # React エントリーポイント
-        └── components/
-            └── EventFilter.tsx   # イベントフィルタ UI
+        ├── App.tsx               # 設定 UI（接続・プラグインURL・TTS）
+        └── main.tsx              # React エントリーポイント
 
 src/plugins/
 ├── hooks/                        # プラグイン共通フック
+├── overlay/                      # オーバーレイ共通の URL パラメーター処理
+├── settings/                     # 設定画面の共通部品（フォーム・イベントフィルタ・保存）
 ├── comment-list/
 │   ├── main.tsx                  # オーバーレイエントリ
 │   ├── CommentList.tsx           # コメントリスト表示
@@ -222,6 +222,7 @@ src/plugins/
 |---|---|---|---|
 | フォントサイズ (px) | 両方 | 28 | コメントの文字サイズ |
 | テーマ | 両方 | ダーク | `dark` / `light` |
+| 表示イベント | 両方 | すべて | 表示するイベント種別（`events`。例: `comment,gift`、`none`） |
 | 表示時間 (秒) | 通知カードのみ | 60 | カードが自動退場するまでの時間 |
 
 設定値は URL パラメータとしてプラグイン URL に自動反映される（例: `?fontSize=24&theme=light`）。URL をコピーして OBS に貼れば設定済みの状態で表示される。

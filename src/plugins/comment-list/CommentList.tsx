@@ -7,6 +7,7 @@ import {
   type OperatorCommentData,
   type EmotionData,
 } from '../hooks/useCommentEvents'
+import type { CommentEventType } from '../../shared/types'
 import './styles.css'
 
 const MAX_COMMENTS = 200
@@ -100,7 +101,7 @@ function CommentItem({ entry }: { entry: CommentEntry }) {
   }
 }
 
-export function CommentList() {
+export function CommentList({ enabledEvents }: { enabledEvents: CommentEventType[] }) {
   const [comments, setComments] = useState<CommentEntry[]>([])
   const listRef = useRef<HTMLDivElement>(null)
   const autoScrollRef = useRef(true)
@@ -122,7 +123,7 @@ export function CommentList() {
     onOperatorComment: useCallback((data: OperatorCommentData) => addEntry('operatorComment', data), [addEntry]),
     onEmotion: useCallback((data: EmotionData) => addEntry('emotion', data), [addEntry]),
     onClear: useCallback(() => setComments([]), []),
-  })
+  }, enabledEvents)
 
   const isTopDirection = document.documentElement.dataset.direction === 'top'
 

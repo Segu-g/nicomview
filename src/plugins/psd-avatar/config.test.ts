@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { DEFAULTS, parseConfig, parseLayerPaths, parseLayerVisibility } from './config'
 import { pluginOverlayUrl } from '../../shared/constants'
+import { DEFAULT_TTS_TEMPLATES } from '../../shared/types'
 
 const parse = (qs: string) => parseConfig(new URLSearchParams(qs))
 
@@ -10,6 +11,7 @@ describe('parseConfig', () => {
       psdFile: 'models/default.psd',
       voicevoxHost: 'http://localhost:50021',
       speaker: 0, speed: 1, volume: 1,
+      ttsEvents: ['comment'], templates: DEFAULT_TTS_TEMPLATES, speakerOverrides: {},
       mouth: [[], [], [], [], []], eye: [[], [], [], [], []],
       threshold: 0.15, sensitivity: 8, mouthTransitionFrames: 4,
       blinkInterval: 3, blinkSpeed: 6,
@@ -32,6 +34,14 @@ describe('parseConfig', () => {
     expect(config).toMatchObject({ voicevoxHost: 'http://10.0.0.1:50021', speaker: 3, flipX: true, preview: true })
     expect(config.mouth[0]).toEqual(['a/b'])
     expect(config.eye[4]).toEqual(['x', 'y'])
+  })
+
+  it('読み上げイベント・テンプレート・イベント別話者を解釈する', () => {
+    const config = parse('ttsEvents=comment%2Cgift&commentTemplate=%7BuserName%7D%E3%80%81%7Bcontent%7D&giftSpeaker=8&commentSpeaker=&emotionSpeaker=abc')
+    expect(config.ttsEvents).toEqual(['comment', 'gift'])
+    expect(config.templates).toEqual({ ...DEFAULT_TTS_TEMPLATES, comment: '{userName}、{content}' })
+    expect(config.speakerOverrides).toEqual({ gift: 8 })
+    expect(parse('ttsEvents=none').ttsEvents).toEqual([])
   })
 
   it('設定画面の既定値から生成した URL は既定の構成と一致する', () => {

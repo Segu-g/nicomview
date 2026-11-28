@@ -14,7 +14,7 @@ describe('VoiceSettings', () => {
     const onChange = vi.fn()
     const { rerender } = render(<VoiceSettings settings={DEFAULTS} onChange={onChange} />)
 
-    await userEvent.click(await screen.findByRole('combobox'))
+    await userEvent.click(await screen.findByRole('combobox', { name: 'キャラクター' }))
     await userEvent.click(screen.getByRole('option', { name: 'A (n)' }))
     expect(onChange).toHaveBeenCalledWith('speaker', 3)
 
@@ -32,5 +32,26 @@ describe('VoiceSettings', () => {
     resolveOld(speakers('A'))
     await waitFor(() => expect(screen.getByText('B (n)')).toBeInTheDocument(), { timeout: 2000 })
     expect(screen.queryByText('A (n)')).toBeNull()
+  })
+
+  it('読み上げイベントとイベント別の話者を、既存の設定と別のキーで保存する', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => speakers('A')))
+    const onChange = vi.fn()
+    render(<VoiceSettings settings={DEFAULTS} onChange={onChange} />)
+    // 話者一覧を取得できると、イベント別の話者欄が出る
+    const commentSpeaker = await screen.findByRole('combobox', { name: 'コメントキャラクター' })
+
+    // 既定はコメントのみ。既定の文面は値ではなく薄い表示
+    expect(screen.getByRole('checkbox', { name: 'コメント' })).toBeChecked()
+    expect(screen.getByLabelText('コメントテンプレート')).toHaveValue('')
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'ギフト' }))
+    expect(onChange).toHaveBeenLastCalledWith('ttsEvents', 'comment,gift')
+    await userEvent.click(screen.getByRole('checkbox', { name: 'コメント' }))
+    expect(onChange).toHaveBeenLastCalledWith('ttsEvents', 'none')
+
+    await userEvent.click(commentSpeaker)
+    await userEvent.click(screen.getByRole('option', { name: 'A (n)' }))
+    expect(onChange).toHaveBeenLastCalledWith('commentSpeaker', 3)
   })
 })

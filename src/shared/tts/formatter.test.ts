@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { formatTtsText } from './formatter'
-import { DEFAULT_TTS_TEMPLATES } from '../../shared/types'
+import { DEFAULT_TTS_TEMPLATES } from '../types'
 
 describe('formatTtsText', () => {
   describe('デフォルトテンプレートとの互換性', () => {

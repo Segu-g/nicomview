@@ -4,7 +4,7 @@ import type { CommentEventType, TtsSettings, TtsAdapterInfo, TtsAdapterParamDef 
 import { ALL_EVENT_TYPES, DEFAULT_TTS_TEMPLATES, isValidEventType } from '../../shared/types'
 import type { TtsAdapter } from './types'
 import { TtsQueue } from './queue'
-import { formatTtsText } from './formatter'
+import { formatTtsText } from '../../shared/tts/formatter'
 
 const SETTINGS_FILE = 'tts-settings.json'
 

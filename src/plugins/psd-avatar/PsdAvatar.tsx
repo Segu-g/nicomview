@@ -1,8 +1,10 @@
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback, useMemo, useState } from 'react'
 import { loadPsd, getLeafLayers, type PsdData, type PsdLayer } from './psdLoader'
 import { MAX_FRAME, type PsdAvatarConfig } from './config'
 import { TtsQueue } from './ttsQueue'
-import { useCommentEvents, type CommentData } from '../hooks/useCommentEvents'
+import { eventHandlers, useCommentEvents } from '../hooks/useCommentEvents'
+import { formatTtsText } from '../../shared/tts/formatter'
+import type { CommentEventType } from '../../shared/types'
 import { PLUGIN_MESSAGE } from '../../shared/pluginMessages'
 
 export type PsdAvatarProps = PsdAvatarConfig
@@ -315,15 +317,20 @@ export function PsdAvatar(props: PsdAvatarProps): JSX.Element {
     return () => window.removeEventListener('message', handler)
   }, [])
 
-  // Comment handler (no-op in preview mode)
-  const onComment = useCallback((data: CommentData) => {
-    if (props.preview) return
-    if (data.isHistory) return
-    if (!data.content) return
-    ttsQueueRef.current?.enqueue(data.content)
-  }, [props.preview])
+  // 対象イベントをテンプレートで整形して読み上げる（プレビュー・履歴は読まない）
+  const speakEvent = useCallback(
+    (eventType: CommentEventType, data: unknown) => {
+      if (props.preview) return
+      const record = (data ?? {}) as Record<string, unknown>
+      if (record.isHistory) return
+      const text = formatTtsText(props.templates[eventType], record)
+      if (text) ttsQueueRef.current?.enqueue(text, props.speakerOverrides[eventType])
+    },
+    [props.preview, props.templates, props.speakerOverrides],
+  )
+  const handlers = useMemo(() => eventHandlers(speakEvent), [speakEvent])
 
-  useCommentEvents({ onComment })
+  useCommentEvents(handlers, props.ttsEvents)
 
   if (error) {
     return <div style={{ color: 'red', padding: 16 }}>PSD読み込みエラー: {error}</div>

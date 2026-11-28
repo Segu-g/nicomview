@@ -15,8 +15,14 @@ export interface TtsQueueOptions {
   onSpeakEnd?: () => void
 }
 
+interface QueueItem {
+  text: string
+  /** 未指定なら opts.speaker */
+  speaker?: number
+}
+
 export class TtsQueue {
-  private queue: string[] = []
+  private queue: QueueItem[] = []
   private processing = false
   private opts: TtsQueueOptions
   private audioContext: AudioContext | null = null
@@ -30,9 +36,9 @@ export class TtsQueue {
     Object.assign(this.opts, opts)
   }
 
-  enqueue(text: string): void {
+  enqueue(text: string, speaker?: number): void {
     if (this.queue.length >= TTS_MAX_QUEUE_SIZE) return
-    this.queue.push(text)
+    this.queue.push({ text, speaker })
     this.processNext()
   }
 
@@ -40,11 +46,11 @@ export class TtsQueue {
     if (this.processing || this.queue.length === 0) return
     this.processing = true
 
-    const text = this.queue.shift()!
+    const { text, speaker } = this.queue.shift()!
     try {
       const wavBuffer = await synthesize(
         text,
-        this.opts.speaker,
+        speaker ?? this.opts.speaker,
         this.opts.speed,
         this.opts.volume,
         this.opts.host

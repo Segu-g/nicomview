@@ -57,6 +57,8 @@ PSD のレイヤー名・グループ名に以下のプレフィックス／サ�
 
 VOICEVOX が起動している状態でコメントが来ると自動で読み上げ、音声に合わせて口パクする。目パチは設定した間隔で自動発生する。
 
+読み上げは設定画面の「読み上げ設定（VOICEVOX）」で、本体の読み上げとは別に設定する。キャラクター・速度・音量に加え、読み上げるイベント（既定はコメントのみ）、イベントごとのテンプレートとキャラクター（スタイル）を選べる。テンプレートが空欄なら本体と同じ既定の文面で読み上げる。本体の読み上げも有効な場合、同じイベントは両方で読み上げられる。
+
 ### 外部プラグイン
 
 `userData/plugins/` にプラグインディレクトリを配置すると自動で読み込まれる。ビルトインプラグインも起動時に同フォルダへコピーされるため、「プラグインフォルダを開く」ボタンで一箇所から管理できる。
@@ -153,7 +155,9 @@ npm run package:linux  # Linux 向けパッケージ (.AppImage)
 ```
 src/
 ├── shared/
-│   └── types.ts                  # 共有型定義
+│   ├── types.ts                  # 共有型定義
+│   ├── tts/                      # VOICEVOX クライアント・テンプレート整形（本体と PSD で共用）
+│   └── ui/                       # 読み上げ設定の画面部品（本体と PSD で共用）
 ├── main/
 │   ├── index.ts                  # Electron メインプロセス
 │   ├── server.ts                 # Express + WebSocket サーバー
@@ -162,7 +166,6 @@ src/
 │   └── tts/
 │       ├── ttsManager.ts         # TTS オーケストレーター・設定管理
 │       ├── queue.ts              # 読み上げキュー（逐次再生・上限 30）
-│       ├── formatter.ts          # イベント → テキスト変換
 │       ├── types.ts              # TtsAdapter インターフェース
 │       └── adapters/
 │           ├── voicevox.ts       # VOICEVOX アダプター
@@ -197,8 +200,8 @@ src/plugins/
     ├── PsdAvatar.tsx             # アバター描画（Canvas）
     ├── psdLoader.ts              # ag-psd による PSD パース
     ├── lipSync.ts                # 発話検出 + 開口/閉口アニメーション
+    ├── config.ts                 # URL パラメーターの既定値・解釈
     ├── ttsQueue.ts               # VOICEVOX 読み上げキュー
-    ├── voicevoxClient.ts         # VOICEVOX REST API クライアント
     └── settings/
         ├── index.html
         ├── main.tsx

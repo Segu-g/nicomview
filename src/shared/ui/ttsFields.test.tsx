@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SpeakerSelect } from './SpeakerSelect'
+import { TtsEventFields } from './TtsEventFields'
 import { TtsParamFields } from './TtsParamFields'
 import type { TtsAdapterParamDef } from '../types'
 
@@ -41,5 +42,41 @@ describe('TtsParamFields', () => {
     expect(screen.getByText(/ID: 5/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: '再取得' }))
     expect(onRefresh).toHaveBeenCalled()
+  })
+})
+
+describe('TtsEventFields', () => {
+  const props = {
+    enabledEvents: ['comment' as const],
+    onEnabledEventsChange: vi.fn(),
+    templates: {},
+    onTemplateChange: vi.fn(),
+    speakerOverrides: { comment: 3 },
+    onSpeakerOverrideChange: vi.fn(),
+    speakerOptions: options,
+    speakerLabel: '話者',
+  }
+
+  it('選択中のイベントだけにテンプレートと話者を出し、空欄には既定の文面を薄く出す', () => {
+    render(<TtsEventFields {...props} templatePlaceholders={{ comment: '{content}' }} />)
+    expect(screen.getByLabelText('コメントテンプレート')).toHaveAttribute('placeholder', '{content}')
+    expect(screen.getByText('B')).toBeInTheDocument()
+    expect(screen.queryByLabelText('ギフトテンプレート')).toBeNull()
+  })
+
+  it('イベントの追加と、話者を既定に戻す操作を通知する', async () => {
+    const onEnabledEventsChange = vi.fn()
+    const onSpeakerOverrideChange = vi.fn()
+    render(<TtsEventFields {...props} onEnabledEventsChange={onEnabledEventsChange} onSpeakerOverrideChange={onSpeakerOverrideChange} />)
+    await userEvent.click(screen.getByRole('checkbox', { name: 'ギフト' }))
+    expect(onEnabledEventsChange).toHaveBeenCalledWith(['comment', 'gift'])
+    await userEvent.click(screen.getByRole('combobox', { name: /コメント話者/ }))
+    await userEvent.click(screen.getByRole('option', { name: 'デフォルト' }))
+    expect(onSpeakerOverrideChange).toHaveBeenCalledWith('comment', '')
+  })
+
+  it('話者の選択肢がなければ話者欄を出さない', () => {
+    render(<TtsEventFields {...props} speakerOptions={[]} />)
+    expect(screen.queryByText('コメント話者')).toBeNull()
   })
 })

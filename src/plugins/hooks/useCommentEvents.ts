@@ -58,6 +58,13 @@ const EVENT_TO_HANDLER: Record<CommentEventType, keyof CommentEventHandlers> = {
   emotion: 'onEmotion',
 }
 
+/** すべてのイベントを 1 つの関数で受け取るハンドラーを作る */
+export function eventHandlers(handle: (eventType: CommentEventType, data: unknown) => void): CommentEventHandlers {
+  return Object.fromEntries(
+    Object.entries(EVENT_TO_HANDLER).map(([eventType, key]) => [key, (data: unknown) => handle(eventType as CommentEventType, data)]),
+  ) as CommentEventHandlers
+}
+
 export function useCommentEvents(
   handlers: CommentEventHandlers,
   /** 受け取るイベント。未指定ならすべて */

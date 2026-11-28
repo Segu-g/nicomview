@@ -4,6 +4,8 @@ import {
   VOICEVOX_DEFAULTS,
   type NumberRange,
 } from '../../shared/constants'
+import { parseEvents } from '../../shared/eventFilter'
+import { ALL_EVENT_TYPES, DEFAULT_TTS_TEMPLATES, type CommentEventType } from '../../shared/types'
 
 export const PLUGIN_ID = 'psd-avatar'
 
@@ -44,11 +46,25 @@ const STRING_DEFAULTS = {
   voicevoxHost: `http://${VOICEVOX_DEFAULTS.host}:${VOICEVOX_DEFAULTS.port}`,
 }
 
+/** 読み上げるイベント。既定はこれまでどおりコメントのみ */
+export const TTS_EVENTS_KEY = 'ttsEvents'
+export const DEFAULT_TTS_EVENTS: readonly CommentEventType[] = ['comment']
+
+/** イベントごとのテンプレート・話者の設定キー。空なら既定値 */
+export const templateKey = (eventType: CommentEventType): string => `${eventType}Template`
+export const speakerKey = (eventType: CommentEventType): string => `${eventType}Speaker`
+
+const EVENT_DEFAULTS = Object.fromEntries(
+  ALL_EVENT_TYPES.flatMap((type) => [[templateKey(type), ''], [speakerKey(type), '']]),
+)
+
 export const DEFAULTS = {
   ...STRING_DEFAULTS,
   ...NUMBER_DEFAULTS,
   ...Object.fromEntries(ALL_ROLE_KEYS.map((key) => [key, ''])),
   layerVisibility: '{}',
+  [TTS_EVENTS_KEY]: '',
+  ...EVENT_DEFAULTS,
   flipX: 0,
   flipY: 0,
 }
@@ -61,6 +77,10 @@ export interface PsdAvatarConfig {
   speaker: number
   speed: number
   volume: number
+  ttsEvents: CommentEventType[]
+  templates: Record<CommentEventType, string>
+  /** 指定のないイベントは speaker で読む */
+  speakerOverrides: Partial<Record<CommentEventType, number>>
   mouth: string[][]
   eye: string[][]
   threshold: number
@@ -107,6 +127,14 @@ export function parseConfig(params: URLSearchParams): PsdAvatarConfig {
     return value === 0 && range && range.min > 0 ? fallback : value
   }
   const str = (key: keyof typeof STRING_DEFAULTS): string => params.get(key) || STRING_DEFAULTS[key]
+  const speakerOverrides: Partial<Record<CommentEventType, number>> = {}
+  const templates = { ...DEFAULT_TTS_TEMPLATES }
+  for (const type of ALL_EVENT_TYPES) {
+    const raw = params.get(speakerKey(type))?.trim()
+    if (raw && Number.isFinite(Number(raw))) speakerOverrides[type] = Number(raw)
+    const template = params.get(templateKey(type))
+    if (template) templates[type] = template
+  }
   const frames = (keys: string[]): string[][] => keys.map((key) => parseLayerPaths(params.get(key)))
 
   return {
@@ -115,6 +143,9 @@ export function parseConfig(params: URLSearchParams): PsdAvatarConfig {
     speaker: num('speaker'),
     speed: num('speed'),
     volume: num('volume'),
+    ttsEvents: parseEvents(params.get(TTS_EVENTS_KEY), DEFAULT_TTS_EVENTS),
+    templates,
+    speakerOverrides,
     mouth: frames(MOUTH_KEYS),
     eye: frames(EYE_KEYS),
     threshold: num('threshold'),

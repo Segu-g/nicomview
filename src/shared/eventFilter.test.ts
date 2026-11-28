@@ -16,4 +16,14 @@ describe('eventFilter', () => {
       expect(parseEvents(serializeEvents(events))).toEqual(events)
     }
   })
+
+  it('既定値を指定すると、既定値と同じ選択は URL に載せない', () => {
+    const defaults = ['comment'] as const
+    expect(parseEvents('', defaults)).toEqual(['comment'])
+    expect(serializeEvents(['comment'], defaults)).toBe('')
+    expect(serializeEvents([...ALL_EVENT_TYPES], defaults)).toBe(ALL_EVENT_TYPES.join(','))
+    for (const events of [[...ALL_EVENT_TYPES], ['comment' as const], ['gift' as const], []]) {
+      expect(parseEvents(serializeEvents(events, defaults), defaults)).toEqual(events)
+    }
+  })
 })

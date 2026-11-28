@@ -19,11 +19,9 @@ import {
   ListItem,
   ListItemText,
   Switch,
-  FormControlLabel,
   Select,
   MenuItem,
   FormGroup,
-  Checkbox,
   Snackbar
 } from '@mui/material'
 import {
@@ -35,7 +33,6 @@ import {
 } from '@mui/icons-material'
 import type {
   ConnectionState,
-  CommentEventType,
   PluginDescriptor,
   PluginSettings,
   PluginSettingsMessage,
@@ -43,14 +40,12 @@ import type {
   TtsAdapterInfo,
   TtsAdapterParamDef
 } from '../../shared/types'
-import { ALL_EVENT_TYPES, DEFAULT_TTS_TEMPLATES } from '../../shared/types'
+import { DEFAULT_TTS_TEMPLATES } from '../../shared/types'
 import { ENGINE_RELOAD_DELAY_MS, pluginOverlayUrl, pluginSettingsUrl } from '../../shared/constants'
 import { PLUGIN_MESSAGE } from '../../shared/pluginMessages'
-import { SpeakerSelect } from '../../shared/ui/SpeakerSelect'
 import { SpeedVolumeFields } from '../../shared/ui/SpeedVolumeFields'
+import { TtsEventFields } from '../../shared/ui/TtsEventFields'
 import { TtsParamFields } from '../../shared/ui/TtsParamFields'
-import { toggleEvent } from '../../shared/eventFilter'
-import { EVENT_LABELS } from '../../shared/eventLabels'
 
 const theme = createTheme({
   colorSchemes: {
@@ -83,14 +78,6 @@ const stateColors: Record<ConnectionState, 'default' | 'warning' | 'success' | '
 
 /** 設定項目が最も多い通知カードが収まる高さ */
 const SETTINGS_IFRAME_HEIGHT = 350
-
-const templatePlaceholders: Record<CommentEventType, string> = {
-  comment: '{userName}, {content}',
-  gift: '{userName}, {itemName}, {point}',
-  emotion: '{content}',
-  notification: '{message}',
-  operatorComment: '{content}, {name}'
-}
 
 function App(): JSX.Element {
   const [liveId, setLiveId] = useState('')
@@ -484,69 +471,26 @@ function App(): JSX.Element {
               </Box>
               <Collapse in={showEventSettings}>
               <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" color="text.secondary">
-                  読み上げ対象イベント
-                </Typography>
-                {ALL_EVENT_TYPES.map((eventType) => {
-                  const enabled = ttsSettings.enabledEvents.includes(eventType)
-                  const label = EVENT_LABELS[eventType]
-                  return (
-                    <Box key={eventType}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            size="small"
-                            checked={enabled}
-                            onChange={(e) => {
-                              handleTtsChange({
-                                enabledEvents: toggleEvent(ttsSettings.enabledEvents, eventType, e.target.checked)
-                              })
-                            }}
-                          />
-                        }
-                        label={label}
-                      />
-                      {enabled && (
-                        <>
-                          <TextField
-                            fullWidth
-                            size="small"
-                            label={`${label}テンプレート`}
-                            value={ttsSettings.formatTemplates[eventType] ?? DEFAULT_TTS_TEMPLATES[eventType]}
-                            helperText={`使用可能: ${templatePlaceholders[eventType]}`}
-                            onChange={(e) => {
-                              handleTtsChange({
-                                formatTemplates: { ...ttsSettings.formatTemplates, [eventType]: e.target.value }
-                              })
-                            }}
-                            sx={{ mb: 1, ml: 4 }}
-                          />
-                          {speakerOptions.length > 0 && (
-                            <Box sx={{ mb: 1, ml: 4 }}>
-                              <SpeakerSelect
-                                label={`${label}${speakerParam?.label ?? ''}`}
-                                value={speakerOverrides[eventType] ?? ''}
-                                options={speakerOptions}
-                                emptyLabel="デフォルト"
-                                onChange={(val) => {
-                                  const next = { ...speakerOverrides }
-                                  if (val === '') {
-                                    delete next[eventType]
-                                  } else {
-                                    next[eventType] = val
-                                  }
-                                  handleTtsChange({
-                                    speakerOverrides: { ...ttsSettings.speakerOverrides, [adapterId]: next }
-                                  })
-                                }}
-                              />
-                            </Box>
-                          )}
-                        </>
-                      )}
-                    </Box>
-                  )
-                })}
+                <TtsEventFields
+                  enabledEvents={ttsSettings.enabledEvents}
+                  onEnabledEventsChange={(enabledEvents) => handleTtsChange({ enabledEvents })}
+                  templates={{ ...DEFAULT_TTS_TEMPLATES, ...ttsSettings.formatTemplates }}
+                  onTemplateChange={(eventType, template) =>
+                    handleTtsChange({ formatTemplates: { ...ttsSettings.formatTemplates, [eventType]: template } })
+                  }
+                  speakerOverrides={speakerOverrides}
+                  onSpeakerOverrideChange={(eventType, value) => {
+                    const next = { ...speakerOverrides }
+                    if (value === '') {
+                      delete next[eventType]
+                    } else {
+                      next[eventType] = value
+                    }
+                    handleTtsChange({ speakerOverrides: { ...ttsSettings.speakerOverrides, [adapterId]: next } })
+                  }}
+                  speakerOptions={speakerOptions}
+                  speakerLabel={speakerParam?.label ?? ''}
+                />
               </Box>
               </Collapse>
 
